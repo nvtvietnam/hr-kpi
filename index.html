@@ -625,7 +625,6 @@ tr.clickable:hover td{background:#F5FBFC;}
       <div class="nav-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg> Dashboard tổng quan</div>
       <div class="nav-item" data-page="employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Nhân sự</div>
       <div class="nav-item" data-page="depts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg> Phòng ban</div>
-        <div class="nav-item" data-page="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Lịch sử truy cập</div>
       <div class="nav-item" data-page="kpi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> KPI &amp; KPI gốc</div>
       <div class="nav-item" data-page="import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM8.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3 6h18M12 6v9"/></svg> Import KPI hằng ngày</div>
       <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Công việc</div>
@@ -635,6 +634,7 @@ tr.clickable:hover td{background:#F5FBFC;}
       <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/></svg> Báo cáo</div>
       <div class="nav-section-label">Quản trị</div>
       <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg> Phân quyền</div>
+      <div class="nav-item" data-page="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Lịch sử truy cập</div>
       <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg> Audit Log</div>
       <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.49 9A9 9 0 1 1 5.64 5.64L1 10M1 10V4M1 10h6"/></svg> Cài đặt hệ thống</div>
 
@@ -1260,6 +1260,7 @@ showView('view-lookup-login');
   function empOfV(c){ return LV().filter(function(e){ return e.code === c; })[0]; }
   var STATUS_BADGE = {'Đang làm việc':'badge-green','Nghỉ phép':'badge-amber','Onboarding':'badge-blue','Offboarding':'badge-gray'};
   var deptSel = document.getElementById('empDept'), fDept = document.getElementById('fEmpDept');
+  var roleSet = [];
   var roleSel = document.getElementById('empRole'), fLevel = document.getElementById('fEmpLevel'), fRef = document.getElementById('fRef');
   DEPTS.forEach(function(d){
     [deptSel, fDept, document.getElementById('kDept')].forEach(function(s){ var o = document.createElement('option'); o.textContent = d; s.appendChild(o); });
@@ -1277,7 +1278,7 @@ showView('view-lookup-login');
     var q = document.getElementById('empSearch').value.trim().toLowerCase();
     var d = deptSel.value, r = roleSel.value, s = document.getElementById('empStatus').value;
     var rows = LV().filter(function(e){
-      return (!q || (e.name+' '+e.code+' '+e.phone).toLowerCase().indexOf(q) > -1) && (!d || e.dept === d) && (!r || e.level === r) && (!s || e.status === s);
+      return (!q || (e.name+' '+e.code+' '+e.phone).toLowerCase().indexOf(q) > -1) && (!d || e.dept === d) && (!roleSet.length || roleSet.indexOf(e.level) > -1) && (!s || e.status === s);
     });
     var body = document.getElementById('empBody');
     if(!rows.length) body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:28px;">Không có nhân sự phù hợp bộ lọc</td></tr>';
@@ -2290,6 +2291,96 @@ showView('view-lookup-login');
       if(ev.target.id === 'impClose' || ev.target.id === 'impCancel'){ ov.style.display = 'none'; }
       if(ev.target.id === 'impGo' && PLAN && !PLAN.fatal) run(PLAN);
     });
+  })();
+  /* ---------- Nhân sự: lọc nhiều chức danh · chuyển cả phòng · lịch sử thay đổi ---------- */
+  (function(){
+    /* 1. Lọc nhiều chức danh */
+    roleSel.style.display = 'none';
+    var wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;';
+    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'select'; btn.style.cssText = 'text-align:left;min-width:190px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;';
+    var panel = document.createElement('div'); panel.style.cssText = 'display:none;position:absolute;top:40px;left:0;z-index:30;min-width:240px;max-height:340px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px rgba(15,27,45,.14);padding:8px;';
+    wrap.appendChild(btn); wrap.appendChild(panel); roleSel.parentNode.insertBefore(wrap, roleSel);
+    var LEVS = ['CTV'].concat(Object.keys(CFG.levels)).concat(['Chưa xếp']);
+    function lvName(l){ return l === 'CTV' ? 'CTV · Cộng tác viên' : l === 'Chưa xếp' ? 'Chưa xếp cấp' : l + ' · ' + CFG.levels[l].title; }
+    function btnText(){ btn.innerHTML = '<span>' + (!roleSet.length ? 'Tất cả chức danh/cấp' : roleSet.length <= 3 ? roleSet.map(function(l){ return l === 'Chưa xếp' ? 'Chưa xếp' : l; }).join(', ') : roleSet.length + ' chức danh') + '</span><span style="font-size:10px;color:var(--text-muted);">▾</span>'; }
+    function drawPanel(){
+      var cnt = {}; LV().forEach(function(e){ cnt[e.level] = (cnt[e.level] || 0) + 1; });
+      panel.innerHTML = '<div style="display:flex;justify-content:space-between;padding:2px 4px 8px;font-size:12px;"><b>Chọn nhiều chức danh</b><a href="#" id="rsClear" style="color:var(--accent-dark);">Bỏ chọn</a></div>' +
+        LEVS.map(function(l){ return '<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px;cursor:pointer;"><input type="checkbox" data-l="' + l + '"' + (roleSet.indexOf(l) > -1 ? ' checked' : '') + '><span style="flex:1;">' + esc(lvName(l)) + '</span><span class="num" style="color:var(--text-muted);font-size:12px;">' + (cnt[l] || 0) + '</span></label>'; }).join('');
+    }
+    btnText();
+    btn.addEventListener('click', function(ev){ ev.stopPropagation(); if(panel.style.display === 'none'){ drawPanel(); panel.style.display = 'block'; } else panel.style.display = 'none'; });
+    panel.addEventListener('click', function(ev){ ev.stopPropagation(); if(ev.target.id === 'rsClear'){ ev.preventDefault(); roleSet = []; drawPanel(); btnText(); renderEmp(); } });
+    panel.addEventListener('change', function(ev){
+      var l = ev.target.getAttribute('data-l'); if(!l) return;
+      var i = roleSet.indexOf(l); if(ev.target.checked && i < 0) roleSet.push(l); if(!ev.target.checked && i > -1) roleSet.splice(i, 1);
+      btnText(); renderEmp();
+    });
+    document.addEventListener('click', function(){ panel.style.display = 'none'; });
+
+    /* 2. Chuyển cả phòng */
+    var addBtn = document.getElementById('btnEmpAdd');
+    var mvBtn = document.createElement('button'); mvBtn.className = 'btn btn-secondary'; mvBtn.id = 'btnMovePhong'; mvBtn.textContent = 'Chuyển cả phòng';
+    addBtn.parentNode.insertBefore(mvBtn, document.getElementById('btnEmpImport') || addBtn);
+    var ov = document.createElement('div'); ov.className = 'overlay'; ov.id = 'mvOverlay';
+    ov.innerHTML = '<div class="modal"><div class="modal-header"><div class="modal-title">Chuyển cả phòng</div><button class="btn-ghost" id="mvClose" style="font-size:16px;">✕</button></div><div class="modal-body"><div class="form-grid" style="grid-template-columns:1fr;">' +
+      '<div class="field"><label>Từ phòng</label><select class="select" id="mvFrom"></select></div>' +
+      '<div class="field"><label>Sang phòng</label><select class="select" id="mvTo"></select><div class="field-hint">Phòng mới phải có sẵn ở trang Phòng ban. Chưa có thì thêm phòng trước.</div></div>' +
+      '<div class="field"><label>Ngày hiệu lực</label><input type="date" id="mvDate"></div>' +
+      '<div class="field"><label>Ghi chú (không bắt buộc)</label><input id="mvNote" placeholder="VD: gộp phòng 215 vào phòng 188"></div>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="mvDel"> Xóa phòng cũ sau khi chuyển (phòng trống)</label>' +
+      '<div id="mvSum" style="font-size:13px;line-height:1.6;"></div></div></div><div class="modal-footer"><button class="btn btn-secondary" id="mvCancel">Hủy</button><button class="btn btn-primary" id="mvGo">Chuyển</button></div></div>';
+    document.body.appendChild(ov);
+    function today(){ var d = new Date(); return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
+    function cntIn(name){ return LIVE.emp.filter(function(e){ return e.dept === name; }).length; }
+    function mvSum(){
+      var f = document.getElementById('mvFrom').value, t = document.getElementById('mvTo').value, s = document.getElementById('mvSum');
+      var fp = LIVE.phong.filter(function(p){ return String(p.id) === f; })[0], tp = LIVE.phong.filter(function(p){ return String(p.id) === t; })[0];
+      if(!fp || !tp){ s.innerHTML = ''; return; }
+      s.innerHTML = fp.id === tp.id ? '<span style="color:var(--red);">Hai phòng đang giống nhau.</span>' : 'Sẽ chuyển <b>' + cntIn(fp.ten) + ' người</b> từ <b>' + esc(fp.ten) + '</b> sang <b>' + esc(tp.ten) + '</b>. Thay đổi được ghi vào lịch sử từng người.';
+    }
+    mvBtn.addEventListener('click', function(){
+      if(!LIVE.on || LIVE.role !== 'admin'){ toast('Chuyển phòng chỉ dùng được khi đăng nhập Admin thật trên bản đã đưa lên mạng'); return; }
+      var opt = LIVE.phong.slice().sort(function(a,b){ return (a.thu_tu||0) - (b.thu_tu||0); }).map(function(p){ return '<option value="' + p.id + '">' + esc(p.ten) + ' (' + cntIn(p.ten) + ' người)</option>'; }).join('');
+      document.getElementById('mvFrom').innerHTML = opt; document.getElementById('mvTo').innerHTML = opt;
+      if(LIVE.phong.length > 1) document.getElementById('mvTo').selectedIndex = 1;
+      document.getElementById('mvDate').value = today(); document.getElementById('mvNote').value = ''; document.getElementById('mvDel').checked = false;
+      mvSum(); ov.style.display = 'flex';
+    });
+    ov.addEventListener('change', function(ev){ if(ev.target.id === 'mvFrom' || ev.target.id === 'mvTo') mvSum(); });
+    ov.addEventListener('click', async function(ev){
+      if(ev.target.id === 'mvClose' || ev.target.id === 'mvCancel'){ ov.style.display = 'none'; return; }
+      if(ev.target.id !== 'mvGo') return;
+      var f = +document.getElementById('mvFrom').value, t = +document.getElementById('mvTo').value;
+      if(!f || !t || f === t){ toast('Chọn hai phòng khác nhau'); return; }
+      var go = ev.target; go.disabled = true; go.textContent = 'Đang chuyển...';
+      try {
+        var r = await SBC.rpc('hr_chuyen_phong', {p_tu:f, p_den:t, p_hieu_luc:document.getElementById('mvDate').value || null, p_ghi_chu:document.getElementById('mvNote').value.trim() || null, p_xoa_phong_cu:document.getElementById('mvDel').checked});
+        if(r.error) throw r.error;
+        if(!r.data || !r.data.ok) throw {message: r.data && r.data.loi === 'khong_co_quyen' ? 'Bạn không có quyền' : 'Phòng không hợp lệ'};
+        ov.style.display = 'none'; await loadAll(); toast('Đã chuyển ' + r.data.so_nguoi + ' người từ ' + r.data.tu + ' sang ' + r.data.den);
+      } catch(e){ toast('Không chuyển được: ' + dbErr(e)); }
+      go.disabled = false; go.textContent = 'Chuyển';
+    });
+
+    /* 3. Lịch sử thay đổi của từng người (trong cửa sổ Sửa nhân sự) */
+    var histBox = document.createElement('div'); histBox.id = 'empHist'; histBox.style.cssText = 'margin-top:18px;border-top:1px solid var(--border);padding-top:14px;display:none;';
+    document.querySelector('#empModal .modal-body').appendChild(histBox);
+    function fmtD(iso){ if(!iso) return ''; var p = String(iso).slice(0,10).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+    function fmtT(iso){ try { return new Date(iso).toLocaleString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh', hour12:false, day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}); } catch(x){ return iso; } }
+    async function loadHist(code){
+      histBox.style.display = 'block'; histBox.innerHTML = '<div style="font-weight:700;font-size:13px;margin-bottom:8px;">Lịch sử thay đổi phòng và chức danh</div><div style="color:var(--text-muted);font-size:12.5px;">Đang tải...</div>';
+      try {
+        var r = await SBC.from('hr_lich_su_nhan_su').select('*').eq('ma_nv', code).order('thoi_gian', {ascending:false}).order('id', {ascending:false}); if(r.error) throw r.error;
+        var rows = r.data || [];
+        histBox.innerHTML = '<div style="font-weight:700;font-size:13px;margin-bottom:8px;">Lịch sử thay đổi phòng và chức danh</div>' + (rows.length ? rows.map(function(h){
+          var t = h.loai === 'phong' ? 'Chuyển phòng: <b>' + esc(h.tu) + '</b> → <b>' + esc(h.den) + '</b>' : h.loai === 'cap' ? 'Đổi chức danh: <b>' + esc(h.tu) + '</b> → <b>' + esc(h.den) + '</b>' : 'Thêm vào hệ thống: <b>' + esc(h.den) + '</b>';
+          return '<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.5;"><span class="num" style="color:var(--text-muted);">' + fmtD(h.hieu_luc) + '</span> · ' + t + '<div style="font-size:11.5px;color:var(--text-muted);">' + (h.ghi_chu ? esc(h.ghi_chu) + ' · ' : '') + 'ghi lúc ' + fmtT(h.thoi_gian) + (h.boi ? ' bởi ' + esc(h.boi) : '') + '</div></div>';
+        }).join('') : '<div style="color:var(--text-muted);font-size:12.5px;">Chưa có thay đổi nào được ghi lại (người này vào hệ thống trước khi bật tính năng này).</div>');
+      } catch(e){ histBox.innerHTML = '<div style="color:var(--red);font-size:12.5px;">Không tải được lịch sử: ' + esc(dbErr(e)) + '</div>'; }
+    }
+    var _om = openModal;
+    openModal = function(code){ _om(code); if(code && LIVE.on && SBC) loadHist(code); else histBox.style.display = 'none'; };
   })();
 
   /* ---------- khởi tạo ---------- */
