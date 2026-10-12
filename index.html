@@ -422,6 +422,11 @@ td.num,th.num{text-align:right;}
 [data-page-content="dsk"] .panel-body{overflow-x:auto;}
 .tb-burger{background:rgba(255,255,255,.14) !important;border:1px solid rgba(255,255,255,.4) !important;}
 .tb-burger svg{color:#fff !important;}
+/* Leader: chỉ thấy Lệnh xác nhận */
+#view-admin-dashboard.as-leader .nav-item:not([data-page="lenh"]),#view-admin-dashboard.as-leader .nav-section-label{display:none;}
+#viewAsBar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:90;align-items:center;gap:14px;padding:10px 16px;border-radius:12px;background:linear-gradient(100deg,#4B2A8F,#8229E3);color:#fff;font-size:13px;box-shadow:0 8px 24px rgba(18,16,58,.4);}
+#viewAsBar .btn-primary{background:#fff;color:#6B3FAA;box-shadow:none;}
+#view-lookup-portal.preview-mode #btnChangePin{display:none;}
 
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
@@ -731,6 +736,7 @@ td.num,th.num{text-align:right;}
       <div class="nav-item" data-page="lenh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Lệnh xác nhận</div>
       <div class="nav-item" data-page="luong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg> Bảng lương</div>
       <div class="nav-item" data-page="backup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> Sao lưu</div>
+      <div class="nav-item" data-page="preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Xem thử vai khác</div>
       <div class="nav-item" data-page="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Lịch sử truy cập</div>
       <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg> Audit Log</div>
       <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.49 9A9 9 0 1 1 5.64 5.64L1 10M1 10V4M1 10h6"/></svg> Cài đặt hệ thống</div>
@@ -825,6 +831,7 @@ td.num,th.num{text-align:right;}
       <div class="content" data-page-content="lenh" id="lenhContent" style="display:none;"></div>
       <div class="content" data-page-content="backup" id="backupContent" style="display:none;"></div>
       <div class="content" data-page-content="dsk" id="dskContent" style="display:none;"></div>
+      <div class="content" data-page-content="preview" id="previewContent" style="display:none;"></div>
       <div class="content" data-page-content="employees" style="display:none;">
         <div class="page-head">
           <div>
@@ -1169,8 +1176,8 @@ showView('view-lookup-login');
 /* ===== admin sub-pages v2: Nhân sự · KPI & KPI gốc · Import hằng ngày ===== */
 (function(){
   var adminView = document.getElementById('view-admin-dashboard');
-  var TITLES = {dashboard:'Dashboard Admin', employees:'Nhân sự', depts:'Phòng ban', history:'Lịch sử truy cập', roles:'Phân quyền', luong:'Bảng lương', lenh:'Lệnh xác nhận', dsk:'KPI & KPI gốc', backup:'Sao lưu', kpi:'KPI & KPI gốc', 'import':'Import dữ liệu'};
-  var SUBS = {dashboard:'Tổng quan quản trị toàn hệ thống', employees:'Hồ sơ nhân sự, cấp bậc và ID môi giới', depts:'Phòng ban và trưởng phòng', dsk:'KPI cả kỳ so với KPI gốc', 'import':'File 13, File 17, lệnh xác nhận, bảng lương', lenh:'Cảnh báo lệnh có thể bị tính muộn', luong:'Bảng lương theo tháng', backup:'Sao lưu dữ liệu và dọn nhật ký', history:'Lịch sử truy cập hệ thống', roles:'Phân quyền Admin và Leader'};
+  var TITLES = {dashboard:'Dashboard Admin', employees:'Nhân sự', depts:'Phòng ban', history:'Lịch sử truy cập', roles:'Phân quyền', luong:'Bảng lương', lenh:'Lệnh xác nhận', dsk:'KPI & KPI gốc', backup:'Sao lưu', preview:'Xem thử vai khác', kpi:'KPI & KPI gốc', 'import':'Import dữ liệu'};
+  var SUBS = {dashboard:'Tổng quan quản trị toàn hệ thống', employees:'Hồ sơ nhân sự, cấp bậc và ID môi giới', depts:'Phòng ban và trưởng phòng', dsk:'KPI cả kỳ so với KPI gốc', 'import':'File 13, File 17, lệnh xác nhận, bảng lương', lenh:'Cảnh báo lệnh có thể bị tính muộn', luong:'Bảng lương theo tháng', backup:'Sao lưu dữ liệu và dọn nhật ký', history:'Lịch sử truy cập hệ thống', roles:'Phân quyền Admin và Leader', preview:'Xem màn hình của các vai khác mà không cần PIN'};
   var toastTimer;
   function toast(msg){
     var t = document.getElementById('toast');
@@ -2132,7 +2139,7 @@ showView('view-lookup-login');
     var r = await SBC.from('hr_vai_tro').select('vai_tro').eq('user_id', u.data.user.id).maybeSingle();
     if(r.error || !r.data){ var rq = null; try { rq = await SBC.rpc('hr_xin_quyen'); } catch(x){} await SBC.auth.signOut(); mgError(rq && rq.data && rq.data.ok ? 'Tài khoản này chưa được cấp quyền. Yêu cầu đã được gửi cho Admin, vui lòng chờ duyệt rồi đăng nhập lại.' : 'Tài khoản này chưa được cấp quyền vào khu vực quản lý HR.'); return false; }
     LIVE.on = true; LIVE.role = r.data.vai_tro;
-    if(LIVE.role === 'admin'){ await loadAll(); showView('view-admin-dashboard'); } else { showView('view-leader-dashboard'); }
+    if(LIVE.role === 'admin'){ await loadAll(); showView('view-admin-dashboard'); } else if(LIVE.enterLeaderUI){ LIVE.enterLeaderUI(false); } else { showView('view-leader-dashboard'); }
     return true;
   }
   if(!SBC){ mgBtn.addEventListener('click', function(){ showView(VIEWS[selectedRole]); }); }
@@ -2603,6 +2610,7 @@ showView('view-lookup-login');
   var PORTAL = {scope:null, q:'', phong:'', err:''};
   async function loadPortalScope(){
     PORTAL.scope = null; PORTAL.err = '';
+    if(LIVE.preview){ PORTAL.scope = LIVE.previewScope; drawPortal(); return; }
     try {
       var r = await SBC.rpc('hr_pham_vi_xem', {p_ma:LIVE.portal.ma_nv, p_pin:LIVE.portalPin});
       if(r.error) throw r.error;
@@ -2613,6 +2621,7 @@ showView('view-lookup-login');
   }
   function lgVal(v){ return typeof v === 'number' ? fmtVnd(v) : esc(v); }
   function luongPanel(){
+    if(LIVE.preview) return '<div class="panel" style="margin-bottom:14px;"><div style="padding:14px 18px;color:var(--text-muted);font-size:13px;">Bảng lương của người này không hiển thị trong chế độ xem thử.</div></div>';
     var L = PORTAL.luong || (PORTAL.luong = {open:false, data:null, loading:false, err:''});
     var h = '<div class="panel" style="margin-bottom:14px;"><div class="panel-head" style="padding:14px 18px 6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div class="panel-title" style="flex:1;">Bảng lương của tôi</div>';
     if(!L.open) return h + '<button class="btn btn-primary" id="lgOpen">Xem bảng lương</button></div><div style="padding:0 18px 14px;color:var(--text-muted);font-size:12.5px;">Chỉ bạn xem được lương của chính mình.</div></div>';
@@ -2639,7 +2648,7 @@ showView('view-lookup-login');
   function drawPortal(){
     var d = LIVE.portal; if(!d) return;
     var first = d.ho_ten.split(/\s+/).pop(), s = PORTAL.scope;
-    var h = '<div class="greet"><h1>Chào ' + esc(first) + ' 👋</h1><p>' + esc(d.phong) + ' · ' + esc(d.cap) + '</p></div>';
+    var h = (LIVE.preview ? '<div class="callout" style="margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;"><div>👁</div><div style="flex:1;min-width:180px;">Đang xem thử với tư cách <b>' + esc(d.ho_ten) + '</b>. Không cần PIN, không thay đổi dữ liệu.</div><button class="btn btn-primary btn-sm" id="pvExit">Thoát xem thử</button></div>' : '') + '<div class="greet"><h1>Chào ' + esc(first) + ' 👋</h1><p>' + esc(d.phong) + ' · ' + esc(d.cap) + '</p></div>';
     h += '<div class="panel" style="margin-bottom:14px;"><div style="padding:14px 18px;color:var(--text-muted);font-size:13px;line-height:1.6;"><b style="color:var(--text);">Số liệu doanh số sắp có.</b> Sau khi quản trị viên cập nhật file doanh số, số liệu của bạn sẽ hiện ở đây.</div></div>';
     h += luongPanel();
     if(PORTAL.err){ h += '<div class="panel"><div style="padding:18px;color:var(--red);font-size:13px;">Không tải được phạm vi xem: ' + esc(PORTAL.err) + '</div></div>'; }
@@ -2674,7 +2683,7 @@ showView('view-lookup-login');
     var lc = document.getElementById('lkContent');
     lc.addEventListener('input', function(ev){ if(ev.target.id === 'ptQ'){ PORTAL.q = ev.target.value; PORTAL.qFocus = true; drawPortal(); } });
     lc.addEventListener('change', function(ev){ if(ev.target.id === 'lgKy') loadLuong(ev.target.value); });
-    lc.addEventListener('click', function(ev){ if(ev.target.id === 'lgOpen'){ PORTAL.luong.open = true; loadLuong(); return; } var b = ev.target.closest('.pt-ph'); if(b){ PORTAL.phong = b.getAttribute('data-p'); PORTAL.qFocus = false; drawPortal(); } });
+    lc.addEventListener('click', function(ev){ if(ev.target.id === 'pvExit'){ LIVE.exitPreview(); return; } if(ev.target.id === 'lgOpen'){ PORTAL.luong.open = true; loadLuong(); return; } var b = ev.target.closest('.pt-ph'); if(b){ PORTAL.phong = b.getAttribute('data-p'); PORTAL.qFocus = false; drawPortal(); } });
   })();
   /* ---------- Admin: Bảng lương (nhập Excel theo tháng) ---------- */
   (function(){
@@ -2807,7 +2816,7 @@ showView('view-lookup-login');
       if(!S.setup){ box.innerHTML = h + '<div class="panel"><div style="padding:18px 20px;font-size:13px;line-height:1.7;">Chức năng này chưa được bật. Mở Supabase → <b>SQL Editor</b> → dán nội dung file <b>lenh_xac_nhan.sql</b> → <b>Run</b>, rồi tải lại trang.</div></div>'; return; }
       if(S.err) h += '<div class="callout" style="margin-bottom:14px;"><div>⚠️</div><div>' + esc(S.err) + '</div></div>';
       if(S.msg) h += '<div class="callout" style="margin-bottom:14px;"><div>✅</div><div>' + S.msg + '</div></div>';
-      if(LIVE.role === 'admin') h += '<div class="panel" style="margin-bottom:16px;"><div style="padding:14px 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;"><button class="btn btn-primary" id="lnGoImp">Cập nhật danh sách lệnh</button><span style="font-size:12.5px;color:var(--text-muted);flex:1;min-width:200px;">Việc nhập file nằm ở trang <b>Import dữ liệu</b>. Hệ thống chỉ lưu thông tin xác nhận, không lưu mã chứng khoán, khối lượng, giá.</span></div></div>';
+      if(LIVE.role === 'admin' && !LIVE.viewAs) h += '<div class="panel" style="margin-bottom:16px;"><div style="padding:14px 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;"><button class="btn btn-primary" id="lnGoImp">Cập nhật danh sách lệnh</button><span style="font-size:12.5px;color:var(--text-muted);flex:1;min-width:200px;">Việc nhập file nằm ở trang <b>Import dữ liệu</b>. Hệ thống chỉ lưu thông tin xác nhận, không lưu mã chứng khoán, khối lượng, giá.</span></div></div>';
       var kys = {}; S.rows.forEach(function(x){ kys[x._ky] = 1; }); kys[S.ky] = 1; var ks = Object.keys(kys).sort().reverse();
       var base = S.rows.filter(function(r){ return r._ky === S.ky && r._st !== 'huy'; }), cnt = {}; base.forEach(function(r){ cnt[r._st] = (cnt[r._st] || 0) + 1; });
       var tot = base.length, late = (cnt.da_muon || 0) + (cnt.qua_han || 0), pend = (cnt.sap_muon || 0) + (cnt.con_han || 0) + (cnt.qua_han || 0);
@@ -3257,6 +3266,92 @@ showView('view-lookup-login');
     });
     LIVE.impTest = {check:check, run:run, state:I, take:takeFiles};
     var nav = document.querySelector('.nav-item[data-page="import"]'); if(nav) nav.addEventListener('click', function(){ I.done = null; I.step = 1; LIVE.loadImp(); });
+  })();
+  /* ---------- Admin: Xem thử với vai khác (Leader, GĐ, TP, NV, CTV) + giao diện rút gọn cho Leader ---------- */
+  (function(){
+    var box = document.getElementById('previewContent'); if(!box) return;
+    var adminView = document.getElementById('view-admin-dashboard');
+    var V = {q:'', grp:'', saved:null};
+    function up(x){ return String(x == null ? '' : x).trim().toUpperCase(); }
+    function grpOf(l){ return /^GĐ/.test(l) ? 'GD' : /^TP/.test(l) ? 'TP' : (l === 'CTV' || l === 'Chưa xếp') ? 'CTV' : 'NV'; }
+    var GN = {GD:'Giám đốc', TP:'Trưởng phòng', NV:'Nhân viên', CTV:'CTV'};
+
+    /* --- giao diện rút gọn: chỉ có Lệnh xác nhận --- */
+    LIVE.enterLeaderUI = function(isPreview){
+      var nameEl = adminView.querySelector('.sf-name'), roleEl = adminView.querySelector('.sf-role');
+      if(isPreview){ V.saved = [nameEl.textContent, roleEl.textContent]; LIVE.viewAs = 'leader'; }
+      nameEl.textContent = 'Leader'; roleEl.textContent = 'Leader · Xem lệnh xác nhận';
+      adminView.classList.add('as-leader');
+      var bar = document.getElementById('viewAsBar'); if(bar) bar.style.display = isPreview ? 'flex' : 'none';
+      showView('view-admin-dashboard');
+      var n = adminView.querySelector('.nav-item[data-page="lenh"]'); if(n) n.click();
+    };
+    function exitLeader(){
+      LIVE.viewAs = null; adminView.classList.remove('as-leader');
+      var nameEl = adminView.querySelector('.sf-name'), roleEl = adminView.querySelector('.sf-role');
+      if(V.saved){ nameEl.textContent = V.saved[0]; roleEl.textContent = V.saved[1]; }
+      var bar = document.getElementById('viewAsBar'); if(bar) bar.style.display = 'none';
+      var n = adminView.querySelector('.nav-item[data-page="preview"]'); if(n) n.click();
+    }
+    var bar = document.createElement('div'); bar.id = 'viewAsBar'; bar.style.display = 'none';
+    bar.innerHTML = '<span>👁 Đang xem thử với vai <b>Leader</b></span><button class="btn btn-primary btn-sm" id="vaExit">Thoát xem thử</button>';
+    document.body.appendChild(bar);
+    bar.querySelector('#vaExit').addEventListener('click', exitLeader);
+
+    /* --- xem như một người cụ thể (giống Cổng tra cứu, không cần PIN) --- */
+    function scopeOf(e){
+      var ph = LIVE.phong || [], thuTu = {}; ph.forEach(function(p){ thuTu[p.ten] = p.thu_tu == null ? 0 : p.thu_tu; });
+      var myIds = [up(e.code)].concat((e.ids || []).map(up)); if(e.msn) myIds.push(up(e.msn));
+      var vai = grpOf(e.level), live = LIVE.emp.filter(function(x){ return x.status !== 'Offboarding'; });
+      var cv = function(x){ return {ma_nv:x.code, ma_nhan_su:x.msn || null, ho_ten:x.name, cap:x.level, phong:x.dept}; };
+      var nguoi, phongs;
+      if(vai === 'GD' || vai === 'TP'){
+        var names = [e.dept];
+        if(vai === 'GD') ph.forEach(function(p){ if(p.ten !== e.dept && myIds.indexOf(up(p.ma_ql_truc_tiep)) >= 0) names.push(p.ten); });
+        nguoi = live.filter(function(x){ return names.indexOf(x.dept) >= 0; }).sort(function(a, b){ return (thuTu[a.dept] - thuTu[b.dept]) || String(a.level).localeCompare(String(b.level)) || String(a.name).localeCompare(String(b.name)); }).map(cv);
+        phongs = names.map(function(n){ var p = ph.filter(function(x){ return x.ten === n; })[0] || {}; return {id:p.id, ten:n, truong_phong:p.ten_truong_phong, so_nguoi:live.filter(function(x){ return x.dept === n; }).length, phong_cua_toi:n === e.dept}; });
+      } else if(vai === 'NV'){
+        nguoi = live.filter(function(x){ return x.code === e.code || (x.ref && myIds.indexOf(up(x.ref)) >= 0); }).sort(function(a, b){ return String(a.level).localeCompare(String(b.level)) || String(a.name).localeCompare(String(b.name)); }).map(cv);
+        phongs = [{ten:e.dept, phong_cua_toi:true}];
+      } else { nguoi = [cv(e)]; phongs = [{ten:e.dept, phong_cua_toi:true}]; }
+      return {ok:true, vai:vai, me:cv(e), phong:phongs, nguoi:nguoi};
+    }
+    LIVE.startPreview = function(code){
+      var e = (LIVE.emp || []).filter(function(x){ return x.code === code; })[0]; if(!e) return;
+      LIVE.portal = {ma_nv:e.code, ho_ten:e.name, cap:e.level, phong:e.dept, ma_nhan_su:e.msn || null};
+      LIVE.portalPin = null; LIVE.preview = true; LIVE.previewScope = scopeOf(e);
+      document.getElementById('view-lookup-portal').classList.add('preview-mode');
+      showView('view-lookup-portal'); renderLivePortal();
+    };
+    LIVE.exitPreview = function(){
+      LIVE.preview = false; LIVE.previewScope = null; LIVE.portal = null; LIVE.portalPin = null;
+      document.getElementById('view-lookup-portal').classList.remove('preview-mode');
+      showView('view-admin-dashboard');
+      var n = adminView.querySelector('.nav-item[data-page="preview"]'); if(n) n.click();
+    };
+    document.querySelectorAll('#view-lookup-portal [data-goto]').forEach(function(b){ b.addEventListener('click', function(){ if(LIVE.preview){ LIVE.preview = false; LIVE.previewScope = null; document.getElementById('view-lookup-portal').classList.remove('preview-mode'); } }, true); });
+
+    /* --- trang chọn vai --- */
+    function draw(){
+      var h = '<div class="page-head"><div><h1>Xem thử vai khác</h1><p>Xem màn hình của Leader, Giám đốc, Trưởng phòng, nhân viên hoặc CTV mà không cần mật khẩu hay PIN. Chỉ để xem, không thay đổi dữ liệu.</p></div></div>';
+      if(!LIVE.on || LIVE.role !== 'admin'){ box.innerHTML = h + '<div class="panel"><div style="padding:28px 22px;text-align:center;color:var(--text-muted);font-size:13.5px;">Trang này chỉ dùng được khi đăng nhập Admin thật.</div></div>'; return; }
+      h += '<div class="panel" style="margin-bottom:16px;"><div class="panel-header"><div class="panel-title">Leader</div></div><div style="padding:14px 20px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;"><button class="btn btn-primary" id="pvLeader">Xem màn hình Leader</button><span style="font-size:13px;color:var(--text-muted);flex:1;min-width:220px;">Leader đăng nhập bằng email và mật khẩu, chỉ thấy trang Lệnh xác nhận (xem, không nhập file).</span></div></div>';
+      var q = V.q.trim().toLowerCase(), all = LIVE.emp || [];
+      var list = all.filter(function(e){ return e.status !== 'Offboarding' && (!V.grp || grpOf(e.level) === V.grp) && (!q || (e.name + ' ' + e.code + ' ' + (e.msn || '') + ' ' + (e.ids || []).join(' ')).toLowerCase().indexOf(q) > -1); });
+      h += '<div class="panel"><div class="panel-header"><div class="panel-title">Nhân sự, Trưởng phòng, Giám đốc, CTV</div></div><div style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><input class="input" id="pvQ" placeholder="Tìm tên hoặc ID" value="' + esc(V.q) + '" style="min-width:220px;">' + [['', 'Tất cả'], ['GD', 'Giám đốc'], ['TP', 'Trưởng phòng'], ['NV', 'Nhân viên'], ['CTV', 'CTV']].map(function(g){ return '<button class="chip pv-g' + (V.grp === g[0] ? ' active' : '') + '" data-g="' + g[0] + '">' + g[1] + '</button>'; }).join('') + '</div><div style="padding:0 20px 8px;font-size:12.5px;color:var(--text-muted);">' + list.length + ' người. Bấm "Xem" để vào màn hình Cổng tra cứu của người đó.</div><div style="overflow-x:auto;"><table><thead><tr><th>Tên</th><th>ID</th><th>Phòng</th><th>Cấp</th><th></th></tr></thead><tbody>' +
+        (list.length ? list.slice(0, 40).map(function(e){ return '<tr><td style="white-space:nowrap;">' + esc(e.name) + '</td><td>' + esc(e.code) + '</td><td style="white-space:nowrap;">' + esc((e.dept || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(e.level) + ' <span style="font-size:11px;color:var(--text-muted);">' + GN[grpOf(e.level)] + '</span></td><td><button class="btn btn-secondary btn-sm pv-go" data-c="' + esc(e.code) + '">Xem</button></td></tr>'; }).join('') : '<tr><td colspan="5" style="padding:16px;color:var(--text-muted);">' + (all.length ? 'Không có ai khớp.' : 'Chưa tải được danh sách nhân sự.') + '</td></tr>') + '</tbody></table></div>' + (list.length > 40 ? '<div class="table-foot"><span>Hiện 40 / ' + list.length + ' người, gõ tên hoặc ID để lọc.</span><span></span></div>' : '') + '</div>';
+      box.innerHTML = h;
+      var qi = document.getElementById('pvQ'); if(qi && V.qFocus){ qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+    }
+    box.addEventListener('input', function(ev){ if(ev.target.id === 'pvQ'){ V.q = ev.target.value; V.qFocus = true; draw(); } });
+    box.addEventListener('click', function(ev){
+      var b = ev.target.closest('button'); if(!b) return; V.qFocus = false;
+      if(b.id === 'pvLeader'){ LIVE.enterLeaderUI(true); return; }
+      if(b.classList.contains('pv-g')){ V.grp = b.getAttribute('data-g'); draw(); return; }
+      if(b.classList.contains('pv-go')){ LIVE.startPreview(b.getAttribute('data-c')); }
+    });
+    LIVE.previewTest = {scopeOf:scopeOf};
+    var nav = document.querySelector('.nav-item[data-page="preview"]'); if(nav) nav.addEventListener('click', function(){ draw(); });
   })();
 
   /* ---------- khởi tạo ---------- */
