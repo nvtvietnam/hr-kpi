@@ -427,6 +427,9 @@ td.num,th.num{text-align:right;}
 #viewAsBar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:90;align-items:center;gap:14px;padding:10px 16px;border-radius:12px;background:linear-gradient(100deg,#4B2A8F,#8229E3);color:#fff;font-size:13px;box-shadow:0 8px 24px rgba(18,16,58,.4);}
 #viewAsBar .btn-primary{background:#fff;color:#6B3FAA;box-shadow:none;}
 #view-lookup-portal.preview-mode #btnChangePin{display:none;}
+.cal-d.ix-day{cursor:pointer;}
+.cal-d.ix-day:hover{box-shadow:0 0 0 2px rgba(130,41,227,.35);}
+.cal-d.sel{outline:3px solid var(--accent);outline-offset:-1px;box-shadow:0 2px 8px rgba(130,41,227,.35);}
 
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
@@ -3074,7 +3077,7 @@ showView('view-lookup-login');
   /* ---------- Admin: Import dữ liệu (File 13, File 17, Lệnh xác nhận, Bảng lương) ---------- */
   (function(){
     var box = document.getElementById('importContent'); if(!box) return;
-    var I = {ky:'', step:1, cards:{f13:[], f17:[], lenh:null, luong:null}, log:[], luongKys:[], busy:false, done:null, err:'', luongMonth:'', luongThay:false, chk:false, setup:true, loading:false};
+    var I = {ky:'', step:1, cards:{f13:[], f17:[], lenh:null, luong:null}, log:[], luongKys:[], busy:false, selDay:'', done:null, err:'', luongMonth:'', luongThay:false, chk:false, setup:true, loading:false};
     var TYPES = {f13:'File 13', f17:'File 17', lenh:'Lệnh xác nhận', luong:'Bảng lương'};
     function iso(d){ return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
     function dm(s){ var m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] : s; }
@@ -3089,7 +3092,8 @@ showView('view-lookup-login');
 
     function knownIds(){ var s = {}; (LIVE.emp || []).forEach(function(e){ s[String(e.code).toUpperCase()] = e; (e.ids || []).forEach(function(i){ s[String(i).toUpperCase()] = e; }); if(e.msn) s[String(e.msn).toUpperCase()] = e; }); return s; }
     function empOf(id){ return knownIds()[String(id).toUpperCase()]; }
-    function validPlans(t){ var c = I.cards[t]; if(!c) return []; return (Array.isArray(c) ? c : [c]).filter(function(p){ return !p.err && !p.fatal; }); }
+    function badMsg(p){ return p.err || p.fatal || ((p.ngay && I.selDay && p.ngay !== I.selDay) ? 'File này là ngày ' + dm(p.ngay) + ', nhưng bạn đang chọn ngày ' + dm(I.selDay) + ' trên lịch' : ''); }
+    function validPlans(t){ var c = I.cards[t]; if(!c) return []; return (Array.isArray(c) ? c : [c]).filter(function(p){ return !badMsg(p); }); }
     function anyReady(){ return ['f13', 'f17', 'lenh', 'luong'].some(function(t){ return validPlans(t).length > 0; }); }
 
     LIVE.loadImp = async function(){
@@ -3135,7 +3139,7 @@ showView('view-lookup-login');
       var out = {rows:0, ok:0, warn:0, err:0, issues:[], over:[], files:[]};
       var known = knownIds(), haveEmp = (LIVE.emp || []).length > 0;
       ['f13', 'f17'].forEach(function(t){ (I.cards[t] || []).forEach(function(p){
-        if(p.err){ out.err++; out.issues.push({lv:'red', who:p.name, txt:p.err}); return; }
+        var bm = badMsg(p); if(bm){ out.err++; out.issues.push({lv:'red', who:p.name, txt:bm}); return; }
         var bad = haveEmp ? p.rows.filter(function(r){ return !known[String(r.id).toUpperCase()]; }) : [];
         out.rows += p.rows.length; out.ok += p.rows.length - bad.length; out.warn += bad.length; out.files.push(TYPES[t] + ' ' + dm(p.ngay));
         if(bad.length) out.issues.push({lv:'amber', who:TYPES[t] + ' ' + dm(p.ngay), txt:bad.length + ' ID chưa có trong Nhân sự, hệ thống sẽ bỏ qua (ví dụ: ' + bad.slice(0, 4).map(function(r){ return r.id; }).join(', ') + ')'});
@@ -3168,7 +3172,8 @@ showView('view-lookup-login');
         else if(s === t){ c += ' today'; st = 'Hôm nay'; }
         else if(s > t) c += ' fut';
         else { c += ' miss'; st = 'Thiếu'; miss++; }
-        h += '<div class="' + c + '"' + sty + '><b>' + dm(s) + '</b><span>' + st + '</span></div>';
+        if(s <= t) c += ' ix-day'; if(s === I.selDay) c += ' sel';
+        h += '<div class="' + c + '" data-d="' + s + '"' + sty + '><b>' + dm(s) + '</b><span>' + st + '</span></div>';
       }
       return {html:h, done:done, miss:miss};
     }
@@ -3178,7 +3183,7 @@ showView('view-lookup-login');
       if(extra) h += extra;
       h += '<div class="dropzone ix-pick" data-t="' + t + '" style="padding:' + (list.length ? '10px' : '18px') + ';"><div class="dz-title">' + (list.length ? (t === 'f13' || t === 'f17' ? 'Thêm file khác' : 'Chọn file khác') : 'Chọn file Excel') + '</div>' + (list.length ? '' : '<div class="dz-sub">' + ((t === 'f13' || t === 'f17') ? 'Chọn được nhiều file (mỗi ngày một file)' : '.xls hoặc .xlsx') + '</div>') + '</div>';
       list.forEach(function(p, i){
-        var bad = p.err || p.fatal, meta = bad ? '<span style="color:var(--red);">' + esc(bad) + '</span>' : (t === 'lenh' ? p.rows.length + ' lệnh · ' + dm(iso(p.from)) + ' – ' + dm(iso(p.to)) : t === 'luong' ? p.rows.length + ' dòng' : 'Ngày ' + dm(p.ngay) + ' · ' + p.rows.length + ' người có số liệu');
+        var bad = badMsg(p), meta = bad ? '<span style="color:var(--red);">' + esc(bad) + '</span>' : (t === 'lenh' ? p.rows.length + ' lệnh · ' + dm(iso(p.from)) + ' – ' + dm(iso(p.to)) : t === 'luong' ? p.rows.length + ' dòng' : 'Ngày ' + dm(p.ngay) + ' · ' + p.rows.length + ' người có số liệu');
         h += '<div class="file-chip" style="display:flex;"><div class="list-icon ' + (bad ? 'amber' : 'blue') + '">XLS</div><div style="flex:1;min-width:0;"><div class="fname">' + esc(p.name || '') + '</div><div class="fmeta">' + meta + '</div></div><button class="btn btn-secondary btn-sm ix-rm" data-t="' + t + '" data-i="' + i + '">Bỏ</button></div>';
       });
       return h + '<div class="req-cols">' + cols.map(function(x){ return '<span class="badge badge-blue">' + x + '</span>'; }).join('') + '</div></div>';
@@ -3203,7 +3208,7 @@ showView('view-lookup-login');
       if(!I.setup){ box.innerHTML = h + '<div class="panel"><div style="padding:18px 20px;font-size:13px;line-height:1.7;">Chưa bật chức năng nhập số liệu. Mở Supabase → <b>SQL Editor</b> → dán nội dung file <b>tat_ca_cap_nhat.sql</b> → <b>Run</b>, rồi tải lại trang.</div></div>'; return; }
       if(I.err) h += '<div class="callout" style="margin-bottom:14px;"><div>⚠️</div><div>' + esc(I.err) + '</div></div>';
       var cal = calHtml();
-      h += '<div class="panel" style="margin-bottom:16px;"><div class="panel-header"><div class="panel-title">Lịch ' + kyLabel(I.ky) + '</div><span style="display:flex;gap:10px;align-items:center;font-size:12px;color:var(--text-muted);">' + cal.done + ' ngày đã có · ' + cal.miss + ' ngày làm việc thiếu <select class="select" id="ixKy">' + kyList().map(function(k){ return '<option value="' + k + '"' + (k === I.ky ? ' selected' : '') + '>' + kyLabel(k) + '</option>'; }).join('') + '</select></span></div><div style="padding:16px 18px;"><div class="cal">' + cal.html + '</div><div class="cal-legend"><span><i style="background:var(--green-soft);border:1px solid #BFE3D0;"></i>Đủ file 13 và 17</span><span><i style="background:var(--amber-soft);border:1px solid var(--amber);"></i>Thiếu một file</span><span><i style="background:var(--red-soft);border:1px solid #F2C4C4;"></i>Ngày làm việc chưa có</span></div></div></div>';
+      h += '<div class="panel" style="margin-bottom:16px;"><div class="panel-header"><div class="panel-title">Lịch ' + kyLabel(I.ky) + '</div><span style="display:flex;gap:10px;align-items:center;font-size:12px;color:var(--text-muted);">' + cal.done + ' ngày đã có · ' + cal.miss + ' ngày làm việc thiếu <select class="select" id="ixKy">' + kyList().map(function(k){ return '<option value="' + k + '"' + (k === I.ky ? ' selected' : '') + '>' + kyLabel(k) + '</option>'; }).join('') + '</select></span></div><div style="padding:16px 18px;"><div class="cal">' + cal.html + '</div><div style="font-size:12.5px;margin:0 0 10px;">' + (I.selDay ? 'Đang chọn nhập ngày <b>' + dm(I.selDay) + '</b>. File 13 và 17 phải đúng ngày này. <button class="btn btn-secondary btn-sm" id="ixClrDay">Bỏ chọn ngày</button>' : '<span style="color:var(--text-muted);">Bấm vào một ngày trên lịch để chọn ngày nhập. Không chọn thì hệ thống lấy ngày ghi trong file.</span>') + '</div><div class="cal-legend"><span><i style="background:var(--green-soft);border:1px solid #BFE3D0;"></i>Đủ file 13 và 17</span><span><i style="background:var(--amber-soft);border:1px solid var(--amber);"></i>Thiếu một file</span><span><i style="background:var(--red-soft);border:1px solid #F2C4C4;"></i>Ngày làm việc chưa có</span></div></div></div>';
       h += stepper();
       if(I.done){
         h += '<div class="panel"><div class="success-box"><div class="success-icon">✓</div><div style="font-size:16px;font-weight:700;">Import hoàn tất</div><div style="font-size:13px;color:var(--text-muted);margin:8px 0 18px;line-height:1.8;">' + I.done.map(esc).join('<br>') + '</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;"><button class="btn btn-secondary" id="ixAgain">Import file khác</button><button class="btn btn-primary" id="ixGoKpi">Xem KPI</button></div></div></div>';
@@ -3254,9 +3259,11 @@ showView('view-lookup-login');
     box.addEventListener('change', function(ev){ var t = ev.target;
       if(t.id === 'ixKy'){ I.ky = t.value; draw(); } else if(t.id === 'ixLgM'){ I.luongMonth = t.value; } else if(t.id === 'ixLgThay'){ I.luongThay = t.checked; } else if(t.id === 'ixChk'){ I.chk = t.checked; draw(); } });
     box.addEventListener('click', function(ev){
+      var dy = ev.target.closest('.ix-day'); if(dy){ var dd = dy.getAttribute('data-d'); I.selDay = (I.selDay === dd) ? '' : dd; I.step = 1; I.done = null; draw(); return; }
       var pk = ev.target.closest('.ix-pick'); if(pk){ pick(pk.getAttribute('data-t')); return; }
       var rm = ev.target.closest('.ix-rm'); if(rm){ var t = rm.getAttribute('data-t'), i = +rm.getAttribute('data-i'); if(Array.isArray(I.cards[t])) I.cards[t].splice(i, 1); else I.cards[t] = null; draw(); return; }
       var b = ev.target.closest('button'); if(!b) return;
+      if(b.id === 'ixClrDay'){ I.selDay = ''; draw(); return; }
       if(b.id === 'ixNext1' && anyReady()){ I.step = 2; I.chk = false; draw(); }
       else if(b.id === 'ixNext2'){ I.step = 3; draw(); } else if(b.id === 'ixNext3'){ I.step = 4; draw(); }
       else if(b.id === 'ixBack1'){ I.step = 1; draw(); } else if(b.id === 'ixBack2'){ I.step = 2; draw(); } else if(b.id === 'ixBack3'){ I.step = 3; draw(); }
