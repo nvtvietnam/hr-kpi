@@ -703,6 +703,9 @@ table:has(#empBody) td.emp-no,table:has(#empBody) th.emp-no{width:34px;text-alig
 
 #lenhContent .panel:has(.ms-pop){overflow:visible !important;}
 #lenhContent .kvbar .ms-btn{min-width:130px;}
+.app-ver{font-size:11px;color:#8F89B8;text-align:center;padding:6px 4px 2px;letter-spacing:.2px;user-select:text;}
+.app-ver.in-login{color:var(--text-muted);margin-top:14px;}
+.sidebar .app-ver.in-side{margin-top:6px;}
 
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
@@ -3696,7 +3699,7 @@ showView('view-lookup-login');
     /* ---- đọc file ---- */
     function readBuf(f){ return new Promise(function(res, rej){ var rd = new FileReader(); rd.onload = function(){ res(rd.result); }; rd.onerror = rej; rd.readAsArrayBuffer(f); }); }
     async function takeFiles(t, files){
-      I.err = ''; I.done = null;
+      I.err = ''; I.done = null; I.choMsg = '';
       if(t === 'f13' || t === 'f17'){
         var list = [];
         for(var i = 0; i < files.length; i++){
@@ -3793,7 +3796,7 @@ showView('view-lookup-login');
     function choPanel(){
       var L = I.cho || []; if(!L.length) return '';
       var ok = L.filter(function(x){ return x.phong_id; }), no = L.filter(function(x){ return !x.phong_id; });
-      var h = '<div class="panel" style="margin-bottom:16px;"><div class="panel-header"><div class="panel-title">ID trong file chưa có trong Nhân sự</div><span style="font-size:12px;color:var(--text-muted);">' + L.length + ' ID · số liệu của họ đang được giữ lại, chưa tính vào KPI</span></div><div style="padding:6px 20px 16px;">';
+      var h = (I.choErr ? '<div class="callout" style="margin-bottom:12px;background:#FDECEC;border-color:#F3B4B4;"><div>⚠️</div><div>' + esc(I.choErr) + '</div></div>' : '') + '<div class="panel" style="margin-bottom:16px;"><div class="panel-header"><div class="panel-title">ID trong file chưa có trong Nhân sự</div><span style="font-size:12px;color:var(--text-muted);">' + L.length + ' ID · số liệu của họ đang được giữ lại, chưa tính vào KPI</span></div><div style="padding:6px 20px 16px;">';
       if(ok.length){
         h += '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;"><b style="font-size:13px;">Thuộc phòng đã có trong hệ thống (' + ok.length + ')</b><button class="btn btn-primary" id="ixChoAll"' + (I.choBusy ? ' disabled' : '') + '>Thêm tất cả ' + ok.length + ' người (CTV)</button></div>' +
           '<div class="table-wrap" style="max-height:300px;overflow:auto;"><table class="scroll"><thead><tr><th>ID</th><th>Họ tên</th><th>Phòng</th><th class="num">Số ngày</th><th class="num">Tổng KPI</th><th></th></tr></thead><tbody>' +
@@ -3805,9 +3808,11 @@ showView('view-lookup-login');
       return h;
     }
     async function choDo(fn, okMsg){
-      I.choBusy = true; draw();
-      try { var r = await fn(); if(r.error) throw r.error; I.err = ''; if(r.data && r.data.them != null) toast('Đã thêm ' + r.data.them + ' người vào Nhân sự'); else if(r.data && r.data.xoa != null) toast('Đã bỏ qua ' + r.data.xoa + ' dòng'); }
-      catch(e){ I.err = (e && e.code === 'PGRST202') ? 'Chưa chạy file them_nhan_su_tu_file.sql trên Supabase' : dbErr(e); }
+      I.choBusy = true; I.choErr = ''; I.choMsg = ''; draw();
+      try { var r = await fn(); if(r.error) throw r.error; I.err = ''; var d0 = r.data || {};
+        if(d0.them != null){ I.choMsg = d0.them > 0 ? ('Đã thêm ' + d0.them + ' người vào Nhân sự (cấp CTV, đúng phòng trong file). Số liệu các ngày đã import của họ đã được đưa vào KPI (' + (d0.dong_so_lieu || 0) + ' dòng số liệu theo ngày). Không mất dữ liệu nào.') : 'Không thêm được ai (ID đã có trong Nhân sự hoặc phòng không khớp).'; toast(I.choMsg); }
+        else if(d0.xoa != null){ I.choMsg = 'Đã bỏ qua ' + d0.xoa + ' dòng số liệu của các ID ngoài phòng.'; toast(I.choMsg); } }
+      catch(e){ I.choErr = (e && e.code === 'PGRST202') ? 'Chưa chạy file them_nhan_su_tu_file.sql trên Supabase' : 'Không thêm được: ' + dbErr(e); }
       I.choBusy = false; try { await LIVE.loadImp(); } catch(e){}
       ['reload', 'loadDsk', 'loadLenh', 'loadLuong'].forEach(function(f){ if(LIVE[f]) try { LIVE[f](); } catch(e){} });
     }
@@ -3819,6 +3824,7 @@ showView('view-lookup-login');
       if(I.err) h += '<div class="callout" style="margin-bottom:14px;"><div>⚠️</div><div>' + esc(I.err) + '</div></div>';
       var cal = calHtml();
       h += '<div class="panel" style="margin-bottom:16px;"><div class="panel-header"><div class="panel-title">Lịch ' + kyLabel(I.ky) + '</div><span style="display:flex;gap:10px;align-items:center;font-size:12px;color:var(--text-muted);">' + cal.done + ' ngày đã có · ' + cal.miss + ' ngày làm việc thiếu <select class="select" id="ixKy">' + kyList().map(function(k){ return '<option value="' + k + '"' + (k === I.ky ? ' selected' : '') + '>' + kyLabel(k) + '</option>'; }).join('') + '</select></span></div><div style="padding:16px 18px;"><div class="cal">' + cal.html + '</div><div style="font-size:12.5px;margin:0 0 10px;"><button class="btn btn-secondary btn-sm" id="ixHol" style="margin-right:8px;' + (I.holMode ? 'background:var(--accent);color:#fff;' : '') + '">' + (I.holMode ? '✓ Đang đánh dấu ngày nghỉ (bấm xong)' : '🏖 Đánh dấu ngày nghỉ') + '</button>' + (I.holMode ? '<span style="color:var(--accent-dark);">Bấm vào ngày cần nghỉ (lễ, Tết...) để bật/tắt. Ngày nghỉ không bị báo thiếu và không tính vào số ngày làm việc.</span>' : I.selDay ? 'Đang chọn nhập ngày <b>' + dm(I.selDay) + '</b>. File 13 và 17 phải đúng ngày này. <button class="btn btn-secondary btn-sm" id="ixClrDay">Bỏ chọn ngày</button>' : '<span style="color:var(--text-muted);">Bấm vào một ngày trên lịch để chọn ngày nhập. Không chọn thì hệ thống lấy ngày ghi trong file.</span>') + '</div><div class="cal-legend"><span><i style="background:var(--green-soft);border:1px solid #BFE3D0;"></i>Đủ file 13 và 17</span><span><i style="background:var(--amber-soft);border:1px solid var(--amber);"></i>Thiếu một file</span><span><i style="background:var(--red-soft);border:1px solid #F2C4C4;"></i>Ngày làm việc chưa có</span><span><i style="background:#E5E7EB;border:1px solid #9CA3AF;"></i>Ngày nghỉ</span></div></div></div>';
+      if(I.choMsg) h += '<div class="callout" style="margin-bottom:14px;background:#E8F7EF;border-color:#9AD9B8;"><div>✅</div><div>' + esc(I.choMsg) + '</div></div>';
       h += choPanel();
       h += stepper();
       if(I.done){
@@ -3893,7 +3899,7 @@ showView('view-lookup-login');
       else if(b.id === 'ixGoKpi'){ var n = document.querySelector('.nav-item[data-page="dsk"]'); if(n) n.click(); }
     });
     LIVE.impTest = {check:check, run:run, state:I, take:takeFiles};
-    var nav = document.querySelector('.nav-item[data-page="import"]'); if(nav) nav.addEventListener('click', function(){ I.done = null; I.step = 1; LIVE.loadImp(); });
+    var nav = document.querySelector('.nav-item[data-page="import"]'); if(nav) nav.addEventListener('click', function(){ I.choMsg = ''; I.done = null; I.step = 1; LIVE.loadImp(); });
   })();
   /* ---------- Admin: Xem thử với vai khác (Leader, GĐ, TP, NV, CTV) + giao diện rút gọn cho Leader ---------- */
   (function(){
@@ -4486,6 +4492,14 @@ showView('view-lookup-login');
   });
   var nav = document.querySelector('.nav-item[data-page="nhom"]');
   if(nav) nav.addEventListener('click', async function(){ N.msg = ''; N.err = ''; await LIVE.nhomLoad(); sync(); draw(); });
+})();
+
+/* ===== Số phiên bản hiển thị ===== */
+(function(){
+  var V = 'v2.9';
+  function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
+  document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
+  var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
 })();
 
   /* ---------- khởi tạo ---------- */
