@@ -701,6 +701,9 @@ table:has(#empBody) td.emp-no,table:has(#empBody) th.emp-no{width:34px;text-alig
 @media(min-width:1280px){.dxcards .dxv{font-size:17px;}}
 .dxc .dxs{word-break:break-word;}
 
+#lenhContent .panel:has(.ms-pop){overflow:visible !important;}
+#lenhContent .kvbar .ms-btn{min-width:130px;}
+
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
 @media (max-width:900px){
@@ -3047,13 +3050,13 @@ showView('view-lookup-login');
   (function(){
     var box = document.getElementById('lenhContent'); if(!box) return;
     var S = {rows:[], loaded:false, loading:false, err:'', msg:'', setup:true, ky:'', phongs:[], sts:[], opts:[], view:'phong', msOpen:'', q:'', plan:null, wd:true, qFocus:false};
-    try { var sv = localStorage.getItem('lenh_wd'); if(sv === '0') S.wd = false; } catch(e){}
+    S.han = 2; S.hanEdit = false;
     function plain(x){ return String(x == null ? '' : x).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
     function pd(s){ var m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; }
     function iso(d){ return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
     function fromIso(s){ var m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); return new Date(+m[1], +m[2] - 1, +m[3]); }
     function dm(d){ return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
-    function addDays(d, n){ var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()), step = 0; while(step < n){ x.setDate(x.getDate() + 1); if(!S.wd || (x.getDay() !== 0 && x.getDay() !== 6)) step++; } return x; }
+    function addDays(d, n){ var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()), step = 0; while(step < n){ x.setDate(x.getDate() + 1); if(x.getDay() !== 0 && x.getDay() !== 6) step++; } return x; }
     function kyOf(d){ var y = d.getFullYear(), m = d.getMonth() + 1; if(d.getDate() >= 21){ m++; if(m > 12){ m = 1; y++; } } return y + '-' + ('0' + m).slice(-2); }
     function kyLabel(k){ var y = +k.slice(0,4), m = +k.slice(5), py = m === 1 ? y - 1 : y, pm = m === 1 ? 12 : m - 1; return 'Tháng ' + m + '/' + y + ' (21/' + ('0' + pm).slice(-2) + ' – 20/' + ('0' + m).slice(-2) + ')'; }
     var today = function(){ var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
@@ -3061,11 +3064,11 @@ showView('view-lookup-login');
     function cls(r){
       if(/hủy|huy/i.test(r.tt_lenh || '')) return 'huy';
       if(/đã xác nhận/i.test(r.xac_nhan || '')) return /muộn|quá hạn/i.test(r.tinh_trang || '') ? 'da_muon' : 'da_dung';
-      var due = addDays(fromIso(r.ngay_gd), 2), t = today();
+      var due = addDays(fromIso(r.ngay_gd), S.han), t = today();
       if(t > due) return 'qua_han';
       return (addDays(t, 1) >= due || iso(t) === iso(due)) ? 'sap_muon' : 'con_han';
     }
-    function decorate(r){ r._st = cls(r); r._due = addDays(fromIso(r.ngay_gd), 2); r._ky = kyOf(fromIso(r.ngay_gd)); r._ho = !!(r.id_dat && r.id_mkt && r.id_dat !== r.id_mkt); return r; }
+    function decorate(r){ r._st = cls(r); r._due = addDays(fromIso(r.ngay_gd), S.han); r._ky = kyOf(fromIso(r.ngay_gd)); r._ho = !!(r.id_dat && r.id_mkt && r.id_dat !== r.id_mkt); return r; }
     function normPh(x){ return String(x || '').replace(/\s+/g, ' ').trim().toUpperCase(); }
     LIVE.normPh = normPh;
     function badge(s){ return '<span class="badge ' + ST[s][1] + '">' + ST[s][0] + '</span>'; }
@@ -3075,6 +3078,7 @@ showView('view-lookup-login');
       if(!LIVE.member && (!LIVE.on || (LIVE.role !== 'admin' && LIVE.role !== 'leader'))){ draw(); return; }
       S.loading = true; S.err = ''; draw();
       try {
+        try { var hr = await SBC.rpc('hr_lenh_han_get'); if(!hr.error && +hr.data >= 1) S.han = +hr.data; } catch(e){}
         var all = [], from = 0;
         if(LIVE.member){
           var a = LIVE.memArgs(), rr = await SBC.rpc('hr_lenh_goi', {p_ma:a.ma || null, p_pin:a.pin || null});
@@ -3110,6 +3114,7 @@ showView('view-lookup-login');
       var out = Object.keys(map).map(function(k){ return map[k]; });
       return {rows:out, skip:skip, from:minD, to:maxD};
     }
+    function isAdm(){ return LIVE.role === 'admin' && !LIVE.viewAs && !LIVE.member; }
     function listRows(){
       var q = S.q.trim().toLowerCase(), ho = S.opts.indexOf('ho') > -1, hy = S.opts.indexOf('huy') > -1;
       return S.rows.filter(function(r){ return r._ky === S.ky && (hy || r._st !== 'huy') && (!ho || r._ho) && (!S.phongs.length || S.phongs.indexOf(r.phong) > -1) && (!S.sts.length || S.sts.indexOf(r._st) > -1) && (!q || ((r.ten_dat || '') + ' ' + (r.ten_mkt || '') + ' ' + (r.id_dat || '') + ' ' + (r.id_mkt || '') + ' ' + (r.tai_khoan || '') + ' ' + (r.so_hieu || '')).toLowerCase().indexOf(q) > -1); });
@@ -3121,7 +3126,7 @@ showView('view-lookup-login');
       return h + '</div>';
     }
     function draw(){
-      var h = '<div class="page-head"><div><h1>Lệnh xác nhận</h1><p>Theo dõi lệnh đặt hộ khách đã được xác nhận chưa, cảnh báo sớm lệnh có thể bị tính muộn (hạn xác nhận: 2 ngày kể từ ngày đặt).</p></div></div>';
+      var h = '<div class="page-head"><div><h1>Lệnh xác nhận</h1><p>Theo dõi lệnh đặt hộ khách đã được xác nhận chưa, cảnh báo sớm lệnh có thể bị tính muộn (hạn xác nhận tính từ ngày đặt, không đếm thứ 7, chủ nhật).</p></div></div>';
       if(!LIVE.member && (!LIVE.on || (LIVE.role !== 'admin' && LIVE.role !== 'leader'))){ box.innerHTML = h + '<div class="panel"><div style="padding:28px 22px;text-align:center;color:var(--text-muted);font-size:13.5px;">Trang này chỉ dùng được khi đăng nhập Admin hoặc Leader thật.</div></div>'; return; }
       if(S.loading){ box.innerHTML = h + '<div style="padding:24px;color:var(--text-muted);">Đang tải...</div>'; return; }
       if(!S.setup){ box.innerHTML = h + '<div class="panel"><div style="padding:18px 20px;font-size:13px;line-height:1.7;">Chức năng này chưa được bật. Mở Supabase → <b>SQL Editor</b> → dán nội dung file <b>lenh_xac_nhan.sql</b> → <b>Run</b>, rồi tải lại trang.</div></div>'; return; }
@@ -3141,7 +3146,7 @@ showView('view-lookup-login');
         '<div class="kv-seg"><button class="ln-view' + (!isL ? ' on' : '') + '" data-v="phong">Theo phòng</button><button class="ln-view' + (isL ? ' on' : '') + '" data-v="ds">Danh sách lệnh</button></div>' +
         (isL ? msel('phongs', 'Tất cả phòng', 'phòng', phOpts, S.phongs) + msel('sts', 'Mọi trạng thái', 'trạng thái', stOpts, S.sts) + msel('opts', 'Lọc khác', 'bộ lọc', [{v:'ho', t:'Chỉ lệnh đặt hộ (ID đặt ≠ ID MKT)'}, {v:'huy', t:'Hiện lệnh đã hủy'}], S.opts) +
           '<input class="input" id="lnQ" placeholder="Tìm tên, ID, tài khoản, số hiệu" value="' + esc(S.q) + '" style="min-width:190px;">' : '') +
-        '<select class="select" id="lnWd" title="Cách tính hạn xác nhận (2 ngày)"><option value="1"' + (S.wd ? ' selected' : '') + '>Hạn: ngày làm việc</option><option value="0"' + (!S.wd ? ' selected' : '') + '>Hạn: ngày thường</option></select>' +
+        (S.hanEdit && isAdm() ? '<span style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;">Hạn xác nhận = ngày đặt + <input class="input" id="lnHan" type="number" min="1" max="30" value="' + S.han + '" style="width:64px;"> ngày làm việc <button class="btn btn-primary" id="lnHanSave">Lưu</button><button class="btn btn-secondary" id="lnHanCancel">Hủy</button></span>' : '<span style="font-size:12.5px;color:var(--text-muted);" title="Không đếm thứ 7, chủ nhật">Hạn xác nhận: +' + S.han + ' ngày làm việc</span>' + (isAdm() ? '<button class="btn btn-secondary" id="lnHanEdit" title="Sửa số ngày đến hạn">⚙ Sửa hạn</button>' : '')) +
         '<span style="flex:1;"></span>' + (upd ? '<span style="font-size:12.5px;color:var(--text-muted);">' + upd + '</span>' : '') + '</div></div>';
       /* bảng tổng hợp nhỏ */
       var cell = function(k, lab, n, col){ return '<th class="ln-cell" data-s="' + k + '" style="cursor:pointer;white-space:nowrap;' + (S.sts.length === 1 && S.sts[0] === k ? 'background:var(--accent-soft);' : '') + '">' + lab + '<div class="num" style="font-size:16px;' + (col ? 'color:' + col + ';' : '') + '">' + n + '</div></th>'; };
@@ -3164,7 +3169,7 @@ showView('view-lookup-login');
     box.addEventListener('change', function(ev){ var t = ev.target; S.qFocus = false;
       if(t.classList && t.classList.contains('ms-ck')){ var ar = S[t.getAttribute('data-k')], ix = ar.indexOf(t.value); if(t.checked && ix < 0) ar.push(t.value); else if(!t.checked && ix > -1) ar.splice(ix, 1); draw(); return; }
       if(t.id === 'lnKy') S.ky = t.value;
-      else if(t.id === 'lnWd'){ S.wd = t.value === '1'; try { localStorage.setItem('lenh_wd', S.wd ? '1' : '0'); } catch(e){} S.rows.forEach(decorate); } else return; draw(); });
+      else return; draw(); });
     box.addEventListener('click', async function(ev){
       S.qFocus = false; var t0 = ev.target;
       var mb = t0.closest('.ms-btn'); if(mb){ var mk = mb.getAttribute('data-k'); S.msOpen = S.msOpen === mk ? '' : mk; draw(); return; }
@@ -3175,6 +3180,11 @@ showView('view-lookup-login');
       var c = t0.closest('.ln-cell'); if(c){ var sv = c.getAttribute('data-s'); S.sts = sv ? [sv] : []; S.view = 'ds'; draw(); return; }
       var pr = t0.closest('.ln-ph'); if(pr){ S.phongs = [pr.getAttribute('data-p')]; S.view = 'ds'; draw(); return; }
       var b = t0.closest('button'); if(!b) return;
+      if(b.id === 'lnHanEdit'){ S.hanEdit = true; draw(); return; }
+      if(b.id === 'lnHanCancel'){ S.hanEdit = false; draw(); return; }
+      if(b.id === 'lnHanSave'){ var nv = parseInt(document.getElementById('lnHan').value, 10); if(!(nv >= 1 && nv <= 30)){ S.err = 'Số ngày phải từ 1 đến 30'; draw(); return; }
+        var rr = await SBC.rpc('hr_lenh_han_set', {p_n:nv}); if(rr.error){ S.err = rr.error.code === 'PGRST202' ? 'Chưa chạy file lenh_han.sql trên Supabase' : dbErr(rr.error); draw(); return; }
+        S.err = ''; S.han = nv; S.hanEdit = false; S.rows.forEach(decorate); draw(); return; }
       if(b.id === 'lnGoImp'){ var ni = document.querySelector('.nav-item[data-page="import"]'); if(ni) ni.click(); return; }
       if(b.id === 'lnXls'){
         var rows = listRows();
