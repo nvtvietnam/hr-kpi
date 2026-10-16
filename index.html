@@ -2304,10 +2304,13 @@ showView('view-lookup-login');
   function renderDepts(){
     var box = document.getElementById('deptsContent'); if(!box) return;
     var h = '<div class="page-head"><div><h1>Phòng ban</h1><p>'+PHONG.length+' phòng · tự thêm khi có phòng mới · nhập ID quản lý trực tiếp, hệ thống tự điền tên</p></div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" id="deptExport">Xuất Excel</button><button class="btn btn-primary" id="deptAdd">＋ Thêm phòng</button></div></div>';
-    h += '<div class="panel"><div class="panel-body"><table><thead><tr><th style="width:56px;">STT</th><th>Phòng</th><th>Tên trưởng phòng</th><th>ID quản lý trực tiếp</th><th>Tên quản lý trực tiếp</th><th style="min-width:200px;">Trạng thái</th></tr></thead><tbody>'+
+    h += '<div class="panel"><div class="panel-body"><table><thead><tr><th style="width:56px;">STT</th><th>Phòng</th><th>Tên trưởng phòng</th><th>ID trưởng phòng</th><th>ID quản lý trực tiếp</th><th>Tên quản lý trực tiếp</th><th style="min-width:200px;">Trạng thái</th></tr></thead><tbody>'+
       PHONG.map(function(d,i){
         var m = d.mgr ? empOfV(d.mgr.trim().toUpperCase()) : null;
         var mn = !d.mgr ? '<span style="color:var(--text-muted);">— (Leader / cấp cao nhất)</span>' : (m ? '<b>'+esc(m.name)+'</b>' : '<span style="color:var(--red);">Không tìm thấy ID</span>');
+        var hn = String(d.head || '').trim().toLowerCase(), pe = (LIVE.emp || EMP || []).filter(function(e){ return e.dept === d.name && e.status !== 'Offboarding'; });
+        var he = pe.filter(function(e){ return hn && String(e.name).trim().toLowerCase() === hn; })[0] || pe.filter(function(e){ return /^(TP|GĐ)/.test(e.level || ''); })[0];
+        var hid = he ? '<b>' + esc(he.msn || he.code) + '</b>' + (he.msn && he.code && he.msn !== he.code ? '<div style="font-size:11.5px;color:var(--text-muted);">' + esc(he.code) + '</div>' : '') : '<span style="color:var(--text-muted);">—</span>';
         var hist = (LIVE.phongLog || []).filter(function(x){ return d.id && x.phong_id === d.id; }).sort(function(a, b){ return String(a.ngay).localeCompare(String(b.ngay)) || a.id - b.id; });
         var hh = hist.length ? '<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;line-height:1.5;">' + hist.map(function(x){ return (x.loai === 'dong' ? 'Đóng ' : 'Mở lại ') + dmyS(x.ngay); }).join(' · ') + '</div>' : '';
         var st = CLOSING === i ? '<span style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;">' + (CMODE === 'dong' ? 'Ngày đóng' : 'Ngày mở lại') + ' <input type="date" class="input dp-cd" value="'+todayIso()+'" style="height:30px;"><button class="btn btn-primary dp-closeok" style="height:30px;padding:0 10px;">Xác nhận</button><button class="btn btn-secondary dp-closeno" style="height:30px;padding:0 10px;">Hủy</button></span>'
@@ -2317,6 +2320,7 @@ showView('view-lookup-login');
         return '<tr data-i="'+i+'"'+(d.closed ? ' style="opacity:.6;"' : '')+'><td class="num">'+(i+1)+'</td>'+
           '<td><input class="tbl-in dp-f" data-f="name" value="'+esc(d.name)+'" style="width:100%;min-width:140px;text-align:left;font-family:inherit;"></td>'+
           '<td><input class="tbl-in dp-f" data-f="head" value="'+esc(d.head)+'" style="width:100%;min-width:140px;text-align:left;font-family:inherit;"></td>'+
+          '<td style="white-space:nowrap;">'+hid+'</td>'+
           '<td><input class="tbl-in dp-f" data-f="mgr" value="'+esc(d.mgr)+'" placeholder="VD: NV0012" style="width:110px;text-align:left;"></td>'+
           '<td>'+mn+'</td>'+
           '<td style="white-space:nowrap;">'+st+'</td></tr>'; }).join('')+
@@ -2336,7 +2340,7 @@ showView('view-lookup-login');
       if(ev.target.closest('#deptAdd')){ PHONG.push({name:'Phòng mới', head:'', mgr:''}); savePhong(); syncDeptOptions(); renderDepts(); return; }
       var cl = ev.target.closest('.dp-close'); if(cl){ CLOSING = +cl.closest('tr').getAttribute('data-i'); CMODE = 'dong'; renderDepts(); return; }
       if(ev.target.closest('.dp-closeno')){ CLOSING = -1; renderDepts(); return; }
-      var cok = ev.target.closest('.dp-closeok'); if(cok){ var ci = +cok.closest('tr').getAttribute('data-i'), cd = cok.closest('tr').querySelector('.dp-cd').value; if(!cd){ toast('Hãy chọn ngày đóng'); return; } CLOSING = -1; if(CMODE === 'dong') LIVE.closePhong(PHONG[ci], cd); else LIVE.openPhong(PHONG[ci], cd); return; }
+      var cok = ev.target.closest('.dp-closeok'); if(cok){ var ci = +cok.closest('tr').getAttribute('data-i'), cd = cok.closest('tr').querySelector('input[type="date"].dp-cd').value; if(!cd){ toast('Hãy chọn ngày đóng'); return; } CLOSING = -1; if(CMODE === 'dong') LIVE.closePhong(PHONG[ci], cd); else LIVE.openPhong(PHONG[ci], cd); return; }
       var op = ev.target.closest('.dp-open'); if(op){ CLOSING = +op.closest('tr').getAttribute('data-i'); CMODE = 'mo'; renderDepts(); return; }
       var del = ev.target.closest('.dp-del');
       if(LIVE.on && del){ LIVE.delPhong(PHONG[+del.closest('tr').getAttribute('data-i')]); return; }
@@ -2399,6 +2403,7 @@ showView('view-lookup-login');
     await loadAll();
   };
   LIVE.closePhong = async function(p, date){
+    var mm = String(date || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(mm) date = mm[3] + '-' + mm[2] + '-' + mm[1];
     var n = LIVE.emp.filter(function(e){ return e.dept === p.name && e.status !== 'Offboarding'; }).length;
     if(n && !confirm('Phòng ' + p.name + ' còn ' + n + ' nhân sự chưa nghỉ. Vẫn đóng phòng? (nhân sự và số liệu vẫn được giữ nguyên)')) return;
     var r = await SBC.from('hr_phong').update({da_dong:true, ngay_dong:date}).eq('id', p.id);
@@ -2406,6 +2411,7 @@ showView('view-lookup-login');
     await loadAll();
   };
   LIVE.openPhong = async function(p, date){
+    var mm = String(date || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(mm) date = mm[3] + '-' + mm[2] + '-' + mm[1];
     var r = await SBC.from('hr_phong').update({da_dong:false, ngay_dong:null}).eq('id', p.id);
     if(r.error) toast(r.error.code === '42703' ? 'Chưa chạy file phong_dong.sql trên Supabase' : 'Không mở lại được: ' + dbErr(r.error)); else { await SBC.from('hr_phong_lich_su').insert({phong_id:p.id, loai:'mo', ngay:date}); toast('Đã mở lại phòng ' + p.name); }
     await loadAll();
@@ -3951,7 +3957,11 @@ showView('view-lookup-login');
       var nguoi, phongs;
       if(vai === 'GD' || vai === 'TP'){
         var names = [e.dept];
-        if(vai === 'GD') ph.forEach(function(p){ if(p.ten !== e.dept && myIds.indexOf(up(p.ma_ql_truc_tiep)) >= 0) names.push(p.ten); });
+        var ids = myIds.slice(), grew = true;
+        while(grew){ grew = false;
+          ph.forEach(function(p){ if(names.indexOf(p.ten) < 0 && p.ma_ql_truc_tiep && ids.indexOf(up(p.ma_ql_truc_tiep)) >= 0){ names.push(p.ten); grew = true; } });
+          live.forEach(function(x){ if(names.indexOf(x.dept) >= 0 && (grpOf(x.level) === 'GD' || grpOf(x.level) === 'TP')){ [up(x.code), x.msn ? up(x.msn) : ''].concat((x.ids || []).map(up)).forEach(function(i){ if(i && ids.indexOf(i) < 0){ ids.push(i); grew = true; } }); } });
+        }
         nguoi = live.filter(function(x){ return names.indexOf(x.dept) >= 0; }).sort(function(a, b){ return (thuTu[a.dept] - thuTu[b.dept]) || String(a.level).localeCompare(String(b.level)) || String(a.name).localeCompare(String(b.name)); }).map(cv);
         phongs = names.map(function(n){ var p = ph.filter(function(x){ return x.ten === n; })[0] || {}; return {id:p.id, ten:n, truong_phong:p.ten_truong_phong, so_nguoi:live.filter(function(x){ return x.dept === n; }).length, phong_cua_toi:n === e.dept}; });
       } else if(vai === 'NV'){
@@ -4522,7 +4532,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.3';
+  var V = 'v3.6';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
