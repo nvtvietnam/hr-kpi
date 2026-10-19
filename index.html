@@ -3630,28 +3630,28 @@ showView('view-lookup-login');
         ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
         var dm = function(x){ var m = String(x || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
         var full = fullNow(), R = SH.rows, tt = 'KPI ' + SH.scope;
-        var sum = {cs:0, ps:0, gc:0, mf:0, tot:0, tg:0, tgTot:0, dat:0, n:0}; R.forEach(function(r){ sum.cs += r.cs; sum.ps += r.ps; sum.gc += r.gc; sum.mf += r.mf; sum.tot += r.tot; sum.tg += r.tg || 0; if(r.tg > 0){ sum.tgTot += r.tot; sum.n++; if(r.dat) sum.dat++; } });
+        var sum = {cs:0, ps:0, gc:0, mf:0, tot:0, tg:0, tgTot:0, dat:0, n:0, miss:0, cl:0}; R.forEach(function(r){ sum.cl += r.cl || 0; if(r.tg > 0) sum.miss += Math.max(0, r.tg - r.tot); sum.cs += r.cs; sum.ps += r.ps; sum.gc += r.gc; sum.mf += r.mf; sum.tot += r.tot; sum.tg += r.tg || 0; if(r.tg > 0){ sum.tgTot += r.tot; sum.n++; if(r.dat) sum.dat++; } });
         var th = function(t, al){ return '<th style="padding:7px 9px;font-size:11.5px;font-weight:700;color:#fff;background:#4B3FA8;text-align:' + (al || 'right') + ';white-space:nowrap;">' + t + '</th>'; };
         var TD = 'padding:5px 9px;border-bottom:1px solid #EEEBFA;font-size:12.5px;line-height:1.25;text-align:right;white-space:nowrap;';
         var rowHtml = function(r, i){
           var p = r.pct == null ? null : r.pct, col = r.dat ? '#16A34A' : '#DC2626', has = p != null && r.tg > 0;
           var bar = has ? '<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;"><span style="font-weight:700;color:' + (full ? col : '#2A2552') + ';">' + viNum(p * 100, 1) + '%</span><div style="width:56px;height:6px;border-radius:3px;background:#ECEAF7;"><div style="height:6px;border-radius:3px;width:' + Math.min(100, Math.round(p * 100)) + '%;background:' + (full ? col : '#7C6FE0') + ';"></div></div></div>' : '<span style="color:#9A97B8;">—</span>';
-          var bd = full && has ? '<span style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:700;background:' + (r.dat ? '#DCFCE7' : '#FEE2E2') + ';color:' + col + ';">' + (r.dat ? 'Đạt' : 'Chưa đạt') + '</span>' : '';
-          return '<tr style="background:' + (i % 2 ? '#FAF9FF' : '#fff') + ';"><td style="' + TD + 'text-align:center;color:#6B6890;width:34px;">' + (i + 1) + '</td><td style="' + TD + 'text-align:left;"><b style="color:#2A2552;">' + esc(r.name) + '</b> <span style="font-size:10.5px;color:#8A87AB;">' + esc(r.sub) + '</span></td><td style="' + TD + '">' + money(r.cs) + '</td><td style="' + TD + '">' + money(r.ps) + '</td><td style="' + TD + '">' + money(r.gc) + '</td><td style="' + TD + '">' + money(r.mf) + '</td><td style="' + TD + 'font-weight:800;color:#2A2552;">' + money(r.tot) + '</td><td style="' + TD + '">' + (r.tg ? money(r.tg) : '—') + '</td><td style="' + TD + '">' + bar + '</td><td style="' + TD + 'text-align:center;">' + bd + '</td></tr>';
+          var bd = has ? (full ? '<span style="display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;background:' + (r.dat ? '#DCFCE7' : '#FEE2E2') + ';color:' + col + ';">' + (r.dat ? 'Đạt' : 'Chưa đạt') + ' · ' + viNum(p * 100, 1) + '%</span>' : '<b>' + viNum(p * 100, 1) + '%</b>') : '';
+          return '<tr style="background:' + (i % 2 ? '#FAF9FF' : '#fff') + ';"><td style="' + TD + 'text-align:center;color:#6B6890;width:34px;">' + (i + 1) + '</td><td style="' + TD + 'text-align:left;"><b style="color:#2A2552;">' + esc(r.name) + '</b> <span style="font-size:10.5px;color:#8A87AB;">' + esc(r.sub) + '</span></td><td style="' + TD + '">' + money(r.cs) + '</td><td style="' + TD + '">' + money(r.ps) + '</td><td style="' + TD + '">' + money(r.gc) + '</td><td style="' + TD + '">' + money(r.mf) + '</td>' + (SH.kind === 'ca' ? '<td style="' + TD + 'font-style:italic;color:#8A87AB;">' + money(r.cl || 0) + '</td>' : '') + '<td style="' + TD + 'font-weight:800;color:#2A2552;">' + money(r.tot) + '</td><td style="' + TD + '">' + (r.tg ? money(r.tg) : '—') + '</td><td style="' + TD + (r.tg > 0 && r.tg > r.tot ? 'font-weight:700;color:#DC2626;' : '') + '">' + (r.tg > 0 ? (r.tg > r.tot ? money(r.tg - r.tot) : '-') : '') + '</td><td style="' + TD + 'text-align:center;">' + bd + '</td></tr>';
         };
         var tc = 'padding:7px 9px;text-align:right;font-size:12.5px;border-top:2px solid #4B3FA8;';
-        var totRow = '<tr style="background:#EFEBFF;font-weight:800;color:#2A2552;"><td style="' + tc + '"></td><td style="' + tc + 'text-align:left;">Tổng cộng (' + R.length + ')</td><td style="' + tc + '">' + money(sum.cs) + '</td><td style="' + tc + '">' + money(sum.ps) + '</td><td style="' + tc + '">' + money(sum.gc) + '</td><td style="' + tc + '">' + money(sum.mf) + '</td><td style="' + tc + '">' + money(sum.tot) + '</td><td style="' + tc + '">' + (sum.tg ? money(sum.tg) : '—') + '</td><td style="' + tc + '">' + (sum.tg ? viNum(sum.tgTot / sum.tg * 100, 1) + '%' : '') + '</td><td style="' + tc + 'text-align:center;">' + (full && sum.n ? sum.dat + '/' + sum.n + ' đạt' : '') + '</td></tr>';
+        var totRow = '<tr style="background:#EFEBFF;font-weight:800;color:#2A2552;"><td style="' + tc + '"></td><td style="' + tc + 'text-align:left;">Tổng cộng (' + R.length + ')</td><td style="' + tc + '">' + money(sum.cs) + '</td><td style="' + tc + '">' + money(sum.ps) + '</td><td style="' + tc + '">' + money(sum.gc) + '</td><td style="' + tc + '">' + money(sum.mf) + '</td>' + (SH.kind === 'ca' ? '<td style="' + tc + 'font-style:italic;color:#6B6890;">' + money(sum.cl) + '</td>' : '') + '<td style="' + tc + '">' + money(sum.tot) + '</td><td style="' + tc + '">' + (sum.tg ? money(sum.tg) : '—') + '</td><td style="' + tc + '">' + (sum.miss ? money(sum.miss) : '') + '</td><td style="' + tc + 'text-align:center;white-space:nowrap;">' + (sum.tg ? viNum(sum.tgTot / sum.tg * 100, 1) + '%' : '') + (full && sum.n ? (sum.tg ? ' · ' : '') + sum.dat + '/' + sum.n + ' đạt' : '') + '</td></tr>';
         var pageHtml = function(from, to, pg, pages){
           var body = ''; for(var i = from; i < to; i++) body += rowHtml(R[i], i);
           return '<div style="padding:10px 12px 0;display:flex;align-items:baseline;justify-content:space-between;gap:12px;"><div style="font-size:16px;font-weight:800;color:#4B3FA8;">' + esc(tt) + (pages > 1 ? ' <span style="font-size:12px;font-weight:600;color:#8A87AB;">· Phần ' + pg + '/' + pages + '</span>' : '') + '</div><div style="font-size:12px;color:#6B6890;">Từ ' + dm(S.from) + ' đến ' + dm(S.to) + '</div></div>' +
-            '<div style="padding:8px 10px 10px;"><div style="background:#fff;border:1px solid #E6E3F5;border-radius:10px;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr>' + th('#', 'center') + th(SH.kind === 'phong' ? 'Phòng' : 'Họ tên', 'left') + th('Cơ sở') + th('Phái sinh') + th('Giải chấp') + th('Miễn phí') + th('Tổng KPI') + th('Chỉ tiêu') + th('% hoàn thành') + th('Kết quả', 'center') + '</tr></thead><tbody>' + body + (pg === pages ? totRow : '') + '</tbody></table></div></div>';
+            '<div style="padding:8px 10px 10px;"><div style="background:#fff;border:1px solid #E6E3F5;border-radius:10px;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr>' + th('#', 'center') + th(SH.kind === 'phong' ? 'Phòng' : 'Họ tên', 'left') + th('Cơ sở') + th('Phái sinh') + th('Giải chấp') + th('Miễn phí') + (SH.kind === 'ca' ? th('Phí chia sẻ') : '') + th('Tổng KPI') + th('Chỉ tiêu') + th('Còn thiếu') + th('Kết quả', 'center') + '</tr></thead><tbody>' + body + (pg === pages ? totRow : '') + '</tbody></table></div></div>';
         };
         var busy = false, setMsg = function(m){ var e = $q('shotMsg'); if(e) e.textContent = m; };
         var render = async function(){
           var n = per(), pages = Math.ceil(N / n), out = [];
           for(var pg = 1; pg <= pages; pg++){
             setMsg('Đang tạo ' + pg + '/' + pages + '…');
-            var w = document.createElement('div'); w.style.cssText = 'position:absolute;left:-12000px;top:0;width:960px;background:#F4F2FC;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#2A2552;';
+            var w = document.createElement('div'); w.style.cssText = 'position:absolute;left:-12000px;top:0;width:1060px;background:#F4F2FC;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#2A2552;';
             w.innerHTML = pageHtml((pg - 1) * n, Math.min(N, pg * n), pg, pages); host.appendChild(w);
             try { out.push(await window.html2canvas(w, {scale:2, backgroundColor:'#ffffff', useCORS:true})); } finally { w.remove(); }
           }
@@ -3717,48 +3717,52 @@ showView('view-lookup-login');
           var dm3 = function(x){ var m = String(x || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
           var ACC = '_(* #,##0_);_(* \\(#,##0\\);_(* "-"??_);_(@_)', FN = 'Calibri';
           var line = {style:'thin', color:{rgb:PAL.line}};
-          var cs3 = function(v, o){ o = o || {}; var c = {v:v, t:typeof v === 'number' ? 'n' : 's', s:{font:{name:FN, sz:o.sz || 11, bold:!!o.b, italic:!!o.i, color:{rgb:o.c || PAL.text}}, alignment:{horizontal:o.h || 'left', vertical:'center', wrapText:!!o.wrap}}}; if(o.f) c.f = o.f; if(o.fill) c.s.fill = {fgColor:{rgb:o.fill}}; if(o.z) c.z = o.z; if(o.bd) c.s.border = o.bd; return c; };
-          var COLS = [['STT', 14, 'c'], ['Tên', 30, 'l'], ['ID', 11, 'c'], ['Phòng', 27, 'l'], ['Cấp', 9, 'c'], ['Cơ sở', 16, 'r'], ['Phái sinh', 15, 'r'], ['Giải chấp', 15, 'r'], ['Miễn phí', 14, 'r'], ['Phí chia sẻ', 15, 'r'], ['Tổng KPI', 18, 'r'], ['Chỉ tiêu', 16, 'r'], ['% hoàn thành', 14, 'r'], ['Kết quả', 12, 'c']];
+          var cs3 = function(v, o){ o = o || {}; var c = {v:v, t:typeof v === 'number' ? 'n' : 's', s:{font:{name:FN, sz:o.sz || 10, bold:!!o.b, italic:!!o.i, color:{rgb:o.c || PAL.text}}, alignment:{horizontal:o.h || 'left', vertical:'center', wrapText:!!o.wrap}}}; if(o.f) c.f = o.f; if(o.fill) c.s.fill = {fgColor:{rgb:o.fill}}; if(o.z) c.z = o.z; if(o.bd) c.s.border = o.bd; return c; };
+          var COLS = [['STT', 6.5, 'c'], ['Tên', 23, 'l'], ['ID', 9, 'c'], ['Phòng', 12, 'l'], ['Cấp', 5.5, 'c'], ['Cơ sở', 12.5, 'r'], ['Phái sinh', 11, 'r'], ['Giải chấp', 11, 'r'], ['Miễn phí', 9, 'r'], ['Phí chia sẻ', 11, 'r'], ['Tổng KPI', 12.5, 'r'], ['Chỉ tiêu', 12, 'r'], ['Còn thiếu', 12, 'r'], ['Kết quả', 16.5, 'c']];
           var NC = COLS.length, grid = [];
           for(var gr = 0; gr < TOTR; gr++) grid.push(new Array(NC));
           var put = function(r, c, cell){ grid[r - 1][c] = cell; };
-          put(1, 0, cs3('BÁO CÁO DOANH SỐ TEAM' + (S.shot.scope && S.shot.scope !== 'Tất cả phòng' ? ' — ' + S.shot.scope : ''), {b:true, sz:18, c:PAL.main}));
-          put(2, 0, cs3('Thời gian', {b:true, c:PAL.mute})); put(2, 1, cs3(dm3(S.from) + ' - ' + dm3(S.to), {b:true}));
+          put(1, 0, cs3('BÁO CÁO DOANH SỐ TEAM' + (S.shot.scope && S.shot.scope !== 'Tất cả phòng' ? ' — ' + S.shot.scope : ''), {b:true, sz:16, c:PAL.main}));
+          put(2, 0, cs3('Thời gian:  ' + dm3(S.from) + ' - ' + dm3(S.to), {b:true, sz:11, c:PAL.text}));
           /* hàng tra cứu nhanh (hàng 4): nhập ID vào ô vàng cột C, các ô còn lại tự nhảy ra */
-          put(4, 0, cs3('Tra cứu nhanh', {b:true, c:PAL.main, wrap:true}));
+          var lh = function(txt, i){ return cs3(txt, {b:true, c:PAL.main, fill:'E4DEFF', h:COLS[i][2] === 'r' ? 'right' : COLS[i][2] === 'c' ? 'center' : 'left', wrap:true, bd:{top:{style:'thin', color:{rgb:PAL.main}}}}); };
+          COLS.forEach(function(c, i){ put(3, i, lh(i === 0 ? 'STT' : i === 2 ? 'Nhập ID' : c[0], i)); });
+          put(4, 0, cs3('', {h:'center', b:true, fill:PAL.soft, bd:{top:{style:'thin', color:{rgb:PAL.main}}, bottom:{style:'thin', color:{rgb:PAL.main}}}, z:'0'}));
           var lk = function(col){ var L = X.encode_col(col); return 'IFERROR(INDEX(' + L + '$' + FIRST + ':' + L + '$' + LAST + ',MATCH($C$4&"",$C$' + FIRST + ':$C$' + LAST + ',0)),"")'; };
+          grid[3][0].f = lk(0);
           var lbd = {top:{style:'thin', color:{rgb:PAL.main}}, bottom:{style:'thin', color:{rgb:PAL.main}}};
           put(4, 1, cs3('', {f:lk(1), b:true, fill:PAL.soft, bd:lbd}));
           put(4, 2, cs3('', {h:'center', b:true, fill:PAL.input, bd:{top:{style:'medium', color:{rgb:'E0A800'}}, bottom:{style:'medium', color:{rgb:'E0A800'}}, left:{style:'medium', color:{rgb:'E0A800'}}, right:{style:'medium', color:{rgb:'E0A800'}}}}));
-          for(var lc = 3; lc < NC; lc++){ var isN = lc >= 5 && lc <= 11, isPc = lc === 12; put(4, lc, cs3('', {f:lk(lc), b:true, fill:PAL.soft, bd:lbd, h:COLS[lc][2] === 'r' ? 'right' : COLS[lc][2] === 'c' ? 'center' : 'left', z:isPc ? '0.0%' : isN ? ACC : undefined})); }
-          put(5, 0, cs3('↑ Nhập ID vào ô vàng, thông tin sẽ tự hiện ở hàng trên', {i:true, sz:9.5, c:PAL.mute}));
+          for(var lc = 3; lc < NC; lc++){ var isN = lc >= 5 && lc <= 12, isPc = false; put(4, lc, cs3('', {f:lk(lc), b:true, fill:PAL.soft, bd:lbd, h:COLS[lc][2] === 'r' ? 'right' : COLS[lc][2] === 'c' ? 'center' : 'left', z:isPc ? '0.0%' : isN ? ACC : undefined})); }
+          
           COLS.forEach(function(c, i){ put(6, i, cs3(c[0], {b:true, c:PAL.head, fill:i === 9 ? '7A72B8' : PAL.main, h:'center', wrap:true})); });
-          var tot3 = {cs:0, ps:0, gc:0, mf:0, cl:0, tot:0, tg:0, tgTot:0, dat:0, n:0};
+          var tot3 = {miss:0, cs:0, ps:0, gc:0, mf:0, cl:0, tot:0, tg:0, tgTot:0, dat:0, n:0};
           R3.forEach(function(r, i){
             var row = FIRST + i, bg = i % 2 ? PAL.zebra : 'FFFFFF', bd = {bottom:line}, has = r.pct != null && r.tg > 0, rs = full3 && has ? (r.dat ? 'Đạt' : 'Chưa đạt') : '';
-            tot3.cs += r.cs; tot3.ps += r.ps; tot3.gc += r.gc; tot3.mf += r.mf; tot3.cl += r.cl || 0; tot3.tot += r.tot; tot3.tg += r.tg || 0; if(r.tg > 0){ tot3.tgTot += r.tot; tot3.n++; if(r.dat) tot3.dat++; }
+            tot3.cs += r.cs; tot3.ps += r.ps; tot3.gc += r.gc; tot3.mf += r.mf; tot3.tot += r.tot; tot3.cl += r.cl || 0; if(r.tg > 0) tot3.miss += Math.max(0, r.tg - r.tot); tot3.tg += r.tg || 0; if(r.tg > 0){ tot3.tgTot += r.tot; tot3.n++; if(r.dat) tot3.dat++; }
             put(row, 0, cs3(i + 1, {h:'center', c:PAL.mute, fill:bg, bd:bd, z:'0'}));
             put(row, 1, cs3(r.name, {b:true, fill:bg, bd:bd}));
             put(row, 2, cs3(String(r.id), {h:'center', c:PAL.share, fill:bg, bd:bd}));
-            put(row, 3, cs3(r.ph, {fill:bg, bd:bd}));
+            put(row, 3, cs3(String(r.ph || '').replace(/^PHÒNG TVĐT /i, ''), {fill:bg, bd:bd}));
             put(row, 4, cs3(r.cap, {h:'center', c:PAL.share, fill:bg, bd:bd}));
             [r.cs, r.ps, r.gc, r.mf].forEach(function(v, k){ put(row, 5 + k, cs3(Math.round(v), {h:'right', fill:bg, bd:bd, z:ACC})); });
             put(row, 9, cs3(Math.round(r.cl || 0), {h:'right', i:true, c:PAL.mute, fill:bg, bd:bd, z:ACC}));
             put(row, 10, cs3(Math.round(r.tot), {h:'right', b:true, fill:bg, bd:bd, z:ACC}));
             put(row, 11, cs3(Math.round(r.tg || 0), {h:'right', fill:bg, bd:bd, z:ACC}));
-            put(row, 12, cs3(has ? r.pct : '', {h:'right', b:true, c:full3 && has ? (r.dat ? PAL.ok : PAL.bad) : PAL.text, fill:bg, bd:bd, z:'0.0%'}));
-            put(row, 13, cs3(rs, {h:'center', b:true, c:rs === 'Đạt' ? PAL.ok : rs ? PAL.bad : PAL.text, fill:rs === 'Đạt' ? PAL.okBg : rs ? PAL.badBg : bg, bd:bd}));
+            var thieu = r.tg > 0 ? Math.max(0, Math.round(r.tg - r.tot)) : '';
+            var ct = cs3(thieu, {h:'right', b:thieu > 0, c:thieu > 0 ? PAL.bad : PAL.text, fill:bg, bd:bd, z:ACC}); ct.f = 'IF(L' + row + '>0,MAX(0,L' + row + '-K' + row + '),"")'; put(row, 12, ct);
+            var kqt = has ? (rs ? rs + ' · ' : '') + viNum(r.pct * 100, 1) + '%' : '';
+            put(row, 13, cs3(kqt, {h:'center', b:true, c:rs === 'Đạt' ? PAL.ok : rs ? PAL.bad : PAL.text, fill:rs === 'Đạt' ? PAL.okBg : rs ? PAL.badBg : bg, bd:bd}));
           });
           var tb3 = {top:{style:'medium', color:{rgb:PAL.main}}};
           for(var tc = 0; tc < NC; tc++) put(TOTR, tc, cs3('', {b:true, fill:PAL.soft, bd:tb3}));
           put(TOTR, 1, cs3('Tổng cộng (' + R3.length + ' người)', {b:true, fill:PAL.soft, bd:tb3}));
-          [5, 6, 7, 8, 9, 10, 11].forEach(function(c){ var L = X.encode_col(c); var vv = [tot3.cs, tot3.ps, tot3.gc, tot3.mf, tot3.cl, tot3.tot, tot3.tg][c - 5]; put(TOTR, c, cs3(Math.round(vv), {h:'right', b:true, fill:PAL.soft, bd:tb3, z:ACC, f:'SUBTOTAL(109,' + L + FIRST + ':' + L + LAST + ')'})); });
-          put(TOTR, 12, cs3(tot3.tg ? tot3.tgTot / tot3.tg : '', {h:'right', b:true, fill:PAL.soft, bd:tb3, z:'0.0%'}));
-          put(TOTR, 13, cs3(full3 && tot3.n ? tot3.dat + '/' + tot3.n + ' đạt' : '', {h:'center', b:true, fill:PAL.soft, bd:tb3}));
+          [5, 6, 7, 8, 9, 10, 11, 12].forEach(function(c){ var L = X.encode_col(c); var vv = [tot3.cs, tot3.ps, tot3.gc, tot3.mf, tot3.cl, tot3.tot, tot3.tg, tot3.miss][c - 5]; put(TOTR, c, cs3(Math.round(vv), {h:'right', b:true, fill:PAL.soft, bd:tb3, z:ACC, f:'SUBTOTAL(109,' + L + FIRST + ':' + L + LAST + ')'})); });
+          put(TOTR, 13, cs3((tot3.tg ? viNum(tot3.tgTot / tot3.tg * 100, 1) + '%' : '') + (full3 && tot3.n ? (tot3.tg ? ' · ' : '') + tot3.dat + '/' + tot3.n + ' đạt' : ''), {h:'center', b:true, fill:PAL.soft, bd:tb3}));
           var ws3 = {}; grid.forEach(function(rowArr, r){ rowArr.forEach(function(c, ci){ if(c) ws3[X.encode_cell({r:r, c:ci})] = c; }); });
           ws3['!ref'] = X.encode_range({s:{r:0, c:0}, e:{r:TOTR - 1, c:NC - 1}});
           ws3['!cols'] = COLS.map(function(c){ return {wch:c[1]}; });
-          ws3['!rows'] = [{hpt:30}, {hpt:20}, {hpt:8}, {hpt:26}, {hpt:16}, {hpt:30}];
+          ws3['!rows'] = [{hpt:28}, {hpt:20}, {hpt:30}, {hpt:24}, {hpt:6}, {hpt:30}];
           ws3['!merges'] = [{s:{r:0, c:0}, e:{r:0, c:NC - 1}}];
           ws3['!autofilter'] = {ref:X.encode_range({s:{r:5, c:0}, e:{r:TOTR - 2, c:NC - 1}})};
           ws3['!pageSetup'] = {orientation:'landscape', fitToWidth:1, fitToHeight:0}; ws3['!sheetPr'] = {pageSetUpPr:{fitToPage:true}};
@@ -3770,7 +3774,7 @@ showView('view-lookup-login');
             var buf3 = XLSX.write(wb3, {type:'array', bookType:'xlsx'});
             window.JSZip.loadAsync(buf3).then(function(zz){
               return zz.file('xl/worksheets/sheet1.xml').async('string').then(function(xml){
-                var pane = '<sheetView workbookViewId="0"><pane ySplit="6" topLeftCell="A7" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A7" sqref="A7"/></sheetView>';
+                var pane = '<sheetView showGridLines="0" workbookViewId="0"><pane xSplit="4" ySplit="6" topLeftCell="E7" activePane="bottomRight" state="frozen"/><selection pane="topRight" activeCell="E1" sqref="E1"/><selection pane="bottomLeft" activeCell="A7" sqref="A7"/><selection pane="bottomRight" activeCell="E7" sqref="E7"/></sheetView>';
                 if(xml.indexOf('<sheetView workbookViewId="0"/>') < 0) throw new Error('no sheetView');
                 zz.file('xl/worksheets/sheet1.xml', xml.replace('<sheetView workbookViewId="0"/>', pane));
                 return zz.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -4721,7 +4725,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.15';
+  var V = 'v3.22';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
