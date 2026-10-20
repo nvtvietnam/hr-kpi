@@ -714,6 +714,13 @@ table:has(#empBody) td.emp-no,table:has(#empBody) th.emp-no{width:34px;text-alig
 .kvw table.kvt-ca tbody tr.kv-total td:nth-child(1),.kvw table.kvt-ca tbody tr.kv-total td:nth-child(2){background:#F3EEFF;}
 .kvw table.kvt-ca td.pctc{min-width:0 !important;}
 
+/* KPI từng người: tên dài thì xuống dòng, chức danh nằm dòng dưới; gọn để vừa một màn hình */
+.kvw table.kvt-ca tbody td:nth-child(2){white-space:normal !important;min-width:110px;max-width:160px;line-height:1.2;}
+.kvw table.kvt-ca tbody td:nth-child(2) .sub{display:block;margin-top:1px;}
+.kvw table.kvt-ca thead th{white-space:normal;line-height:1.15;vertical-align:bottom;}
+.kvw table.kvt-ca tbody td,.kvw table.kvt-ca thead th{padding-left:4px !important;padding-right:4px !important;}
+.kvw table.kvt-ca td.num{white-space:nowrap;}
+
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
 @media (max-width:900px){
@@ -3694,7 +3701,13 @@ showView('view-lookup-login');
         $q('shotPng').addEventListener('click', function(){ go('png'); });
         $q('shotPdf').addEventListener('click', function(){ go('pdf'); });
       }
-      S.after = function(){ var qi = document.getElementById('kvQ'); if(qi && S.qFocus){ qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); } };
+      /* thu cả bảng "Từng người" cho vừa chiều ngang màn hình (không cần thanh kéo) */
+      function fitKv(){
+        var tb = document.querySelector('table.kvt-ca'); if(!tb) return; var bd = tb.closest('.panel-body'); if(!bd) return;
+        tb.style.zoom = ''; var w = tb.scrollWidth, c = bd.clientWidth; if(c > 200 && w > c + 1){ tb.style.zoom = Math.max(0.55, (c - 2) / w).toFixed(3); }
+      }
+      if(!window.__kvFit){ window.__kvFit = true; window.addEventListener('resize', function(){ fitKv(); }); }
+      S.after = function(){ fitKv(); var qi = document.getElementById('kvQ'); if(qi && S.qFocus){ qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); } };
       S.input = function(ev){ if(ev.target.id === 'kvQ'){ S.q = ev.target.value; S.qFocus = true; cfg.redraw(); return true; } return false; };
       S.change = function(ev){ var t = ev.target; S.qFocus = false;
         if(t.classList && t.classList.contains('ms-ck')){ var ar = S[t.getAttribute('data-k')], ix = ar.indexOf(t.value); if(t.checked && ix < 0) ar.push(t.value); else if(!t.checked && ix > -1) ar.splice(ix, 1); cfg.redraw(); return true; }
@@ -4735,7 +4748,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.24';
+  var V = 'v3.26';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
