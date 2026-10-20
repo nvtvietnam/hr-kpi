@@ -715,8 +715,15 @@ table:has(#empBody) td.emp-no,table:has(#empBody) th.emp-no{width:34px;text-alig
 .kvw table.kvt-ca td.pctc{min-width:0 !important;}
 
 /* KPI từng người: tên dài thì xuống dòng, chức danh nằm dòng dưới; gọn để vừa một màn hình */
-.kvw table.kvt-ca tbody td:nth-child(2){white-space:normal !important;min-width:110px;max-width:160px;line-height:1.2;}
-.kvw table.kvt-ca tbody td:nth-child(2) .sub{display:block;margin-top:1px;}
+.kvw table.kvt-ca tbody td:nth-child(2){white-space:nowrap !important;min-width:120px;max-width:230px;overflow:hidden;text-overflow:ellipsis;line-height:1.2;}
+.kvw table.kvt-ca tbody td:nth-child(2) .sub{display:inline;margin-left:3px;font-size:10.5px !important;}
+.kvw table.kvt-ca{font-size:12px;}
+.kvw table.kvt-ca tbody td{font-size:12px;}
+.kvw table.kvt-ca td.sub,.kvw table.kvt-ca td.num.sub{font-size:11.5px !important;}
+.kvw table.kvt-ca b.nm{font-size:12.5px;}
+.kvw table.kvt-ca td.tot{font-size:12.5px !important;}
+.kvw table.kvt-ca thead th{font-size:11.5px;}
+.kvw table.kvt-ca tbody td{padding-top:5px !important;padding-bottom:5px !important;}
 .kvw table.kvt-ca thead th{white-space:normal;line-height:1.15;vertical-align:bottom;}
 .kvw table.kvt-ca tbody td,.kvw table.kvt-ca thead th{padding-left:4px !important;padding-right:4px !important;}
 .kvw table.kvt-ca td.num{white-space:nowrap;}
@@ -3386,6 +3393,7 @@ showView('view-lookup-login');
     async function loadCts(){
       K.ctErr = '';
       try { var r = await SBC.rpc('hr_chi_tieu_thang_get'); if(r.error){ if(r.error.code === 'PGRST202' || /Could not find|does not exist/i.test(r.error.message || '')) K.ctErr = 'Chưa bật chỉ tiêu theo tháng. Mở Supabase → <b>SQL Editor</b> → dán file <b>kpi_phan_quyen.sql</b> (bản mới) → <b>Run</b>, rồi tải lại trang.'; else throw r.error; } else K.cts = r.data || {}; } catch(e){ K.ctErr = esc(dbErr(e)); }
+      try { var r2 = await SBC.rpc('hr_chi_tieu_rieng_get'); if(r2.error){ K.rieng = K.rieng || {}; K.riengErr = (r2.error.code === 'PGRST202' || /Could not find|does not exist/i.test(r2.error.message || '')) ? 'Chưa bật chỉ tiêu riêng. Mở Supabase → SQL Editor → dán file kpi_phan_quyen.sql (bản mới) → Run, rồi tải lại trang.' : esc(dbErr(r2.error)); } else { K.rieng = r2.data || {}; K.riengErr = ''; } } catch(e){ K.rieng = K.rieng || {}; K.riengErr = esc(dbErr(e)); }
       draw();
     }
     K.ky = kyNow();
@@ -3451,7 +3459,13 @@ showView('view-lookup-login');
         var ct = S.data && S.data.ct; if(ct && ct[cap] != null) return Number(ct[cap]);
         return CFG.levels[cap] ? CFG.levels[cap].std : 0;
       }
+      function tgPerson(n, head){
+        var o = S.data && S.data.ct_rieng && S.data.ct_rieng[n.ma_nv], months = S.span === 'quy' ? quyMonths(S.ky) : [S.ky], any = false;
+        var sum = months.reduce(function(a, k){ var e = o && o[k]; if(e && e.v != null && Number(e.v) > 0){ any = true; return a + Number(e.v); } return a + (head ? 0 : ctFor(k, n.cap)); }, 0);
+        return {tg:sum, rg:any};
+      }
       function tgOf(cap){ return S.span === 'quy' ? quyMonths(S.ky).reduce(function(a, k){ return a + ctFor(k, cap); }, 0) : ctFor(S.ky, cap); }
+      function repName(){ var y = S.ky.slice(0,4), m = +S.ky.slice(5); return 'Báo cáo doanh số ' + (S.span === 'quy' ? 'Q' + Math.ceil(m / 3) : 'T' + m) + '.' + y; }
       function short(p){ return String(p || '').replace(/^PHÒNG TVĐT /, ''); }
       function money(n){ return viNum(Math.round(+n || 0), 0); }
       function dmy(s){ var m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : s; }
@@ -3494,8 +3508,8 @@ showView('view-lookup-login');
         var me = cfg.me ? cfg.me() : '';
         /* KPI từng người: TP/GĐ cũng chỉ hiện số của chính họ (số cả phòng nằm ở bảng theo phòng) */
         var persons = D.nguoi.map(function(n){
-          var head = isHead(n.cap), v = agg[n.ma_nv] || ZERO(), tot = v.cs + v.ps + v.gc + v.mf, tg = head ? 0 : tgOf(n.cap);
-          return {n:n, v:v, tot:tot, tg:tg, pct:tg > 0 ? tot / tg : null, dat:tg > 0 && tot >= tg, head:head, me:n.ma_nv === me};
+          var head = isHead(n.cap), v = agg[n.ma_nv] || ZERO(), tot = v.cs + v.ps + v.gc + v.mf, tp0 = tgPerson(n, head), tg = tp0.tg;
+          return {n:n, rg:tp0.rg, v:v, tot:tot, tg:tg, pct:tg > 0 ? tot / tg : null, dat:tg > 0 && tot >= tg, head:head, me:n.ma_nv === me};
         });
         var phongs = (D.phong || []).map(function(p){
           var heads = D.nguoi.filter(function(n){ return n.phong === p.ten && isHead(n.cap); });
@@ -3616,7 +3630,7 @@ showView('view-lookup-login');
             msel('cap', 'Mọi chức danh', 'chức danh', Object.keys(CFG.levels).map(function(l){ return {v:l, t:l}; }), S.cap) +
             '<select class="select" id="kvSt"><option value="">Đạt + chưa đạt</option><option value="dat"' + (S.st === 'dat' ? ' selected' : '') + '>Đạt</option><option value="chua"' + (S.st === 'chua' ? ' selected' : '') + '>Chưa đạt</option></select>' +
             (D.nguoi.length > 8 ? '<input class="input" id="kvQ" placeholder="Tìm tên hoặc ID" value="' + esc(S.q) + '">' : '') + '<button class="btn btn-secondary" id="kvXls">Tải Excel</button><button class="btn btn-secondary" id="kvShot" title="Chụp ảnh toàn bộ bảng để gửi">📷 Chụp ảnh</button></div><div class="panel-body"><table class="kvt kvt-ca"><thead><tr><th>#</th>' + th('ca', 'ten', 'Tên') + th('ca', 'id', 'ID') + th('ca', 'phong', 'Phòng') + th('ca', 'cs', 'Cơ sở') + th('ca', 'ps', 'Phái sinh') + th('ca', 'gc', 'Giải chấp') + th('ca', 'mf', 'Miễn phí') + th('ca', 'cl', 'Chia sẻ', 'Phí chia sẻ: đã nằm trong cột Cơ sở, chỉ để xem') + th('ca', 'tot', 'Tổng KPI') + th('ca', 'tg', 'Chỉ tiêu') + th('ca', 'mt', 'Còn thiếu', 'Chỉ tiêu trừ Tổng KPI hiện tại') + th('ca', 'pct', 'Kết quả', 'Đạt / Chưa đạt kèm % hoàn thành') + '</tr></thead><tbody>' +
-            (list.length ? list.slice(0, 1500).map(function(x, ix){ var v = x.v; return '<tr' + (x.me ? ' style="background:var(--accent-soft);"' : '') + '><td class="sub">' + (ix + 1) + '</td><td style="white-space:nowrap;"><b class="nm">' + esc(x.n.ho_ten) + '</b>' + (x.me ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + ' <span class="sub" style="font-size:11px;">' + esc(x.n.cap) + '</span></td><td class="sub">' + esc(x.n.ma_nv) + '</td><td class="sub" style="white-space:nowrap;">' + esc(short(x.n.phong)) + '</td><td class="num sub">' + money(v.cs) + '</td><td class="num sub">' + money(v.ps) + '</td><td class="num sub">' + money(v.gc) + '</td><td class="num sub">' + money(v.mf) + '</td><td class="num sub" style="opacity:.65;">' + money(v.cl) + '</td><td class="num tot">' + money(x.tot) + '</td><td class="num sub">' + (x.tg ? money(x.tg) : '—') + '</td><td class="num" style="white-space:nowrap;' + (thieu(x) > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--text-muted);') + '">' + (thieu(x) == null ? '' : thieu(x) > 0 ? money(thieu(x)) : '-') + '</td><td class="pctc">' + kqCell(x) + '</td></tr>'; }).join('') : '<tr><td colspan="13" style="padding:16px;color:var(--text-muted);">Không có ai khớp bộ lọc.</td></tr>') +
+            (list.length ? list.slice(0, 1500).map(function(x, ix){ var v = x.v; return '<tr' + (x.me ? ' style="background:var(--accent-soft);"' : '') + '><td class="sub">' + (ix + 1) + '</td><td style="white-space:nowrap;"><b class="nm">' + esc(x.n.ho_ten) + '</b>' + (x.me ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + ' <span class="sub" style="font-size:11px;">' + esc(x.n.cap) + '</span></td><td class="sub">' + esc(x.n.ma_nv) + '</td><td class="sub" style="white-space:nowrap;">' + esc(short(x.n.phong)) + '</td><td class="num sub">' + money(v.cs) + '</td><td class="num sub">' + money(v.ps) + '</td><td class="num sub">' + money(v.gc) + '</td><td class="num sub">' + money(v.mf) + '</td><td class="num sub" style="opacity:.65;">' + money(v.cl) + '</td><td class="num tot">' + money(x.tot) + '</td><td class="num sub"' + (x.rg ? ' title="Chỉ tiêu riêng (đã đặt khác chỉ tiêu theo cấp)" style="color:var(--accent-dark);font-weight:600;"' : '') + '>' + (x.tg ? money(x.tg) : '—') + (x.rg ? ' ✎' : '') + '</td><td class="num" style="white-space:nowrap;' + (thieu(x) > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--text-muted);') + '">' + (thieu(x) == null ? '' : thieu(x) > 0 ? money(thieu(x)) : '-') + '</td><td class="pctc">' + kqCell(x) + '</td></tr>'; }).join('') : '<tr><td colspan="13" style="padding:16px;color:var(--text-muted);">Không có ai khớp bộ lọc.</td></tr>') +
             (list.length ? (function(){ var Z = ZERO(), cl = 0, mt = 0; list.forEach(function(x){ if(thieu(x) > 0) mt += thieu(x); Z.cs += x.v.cs; Z.ps += x.v.ps; Z.gc += x.v.gc; Z.mf += x.v.mf; cl += x.v.cl; }); return '<tr class="kv-total" style="font-weight:700;"><td></td><td>Tổng cộng (' + list.length + ' người)</td><td></td><td></td><td class="num sub">' + money(Z.cs) + '</td><td class="num sub">' + money(Z.ps) + '</td><td class="num sub">' + money(Z.gc) + '</td><td class="num sub">' + money(Z.mf) + '</td><td class="num sub" style="opacity:.65;">' + money(cl) + '</td><td class="num tot">' + money(Z.cs + Z.ps + Z.gc + Z.mf) + '</td><td></td><td class="num" style="white-space:nowrap;color:var(--red);">' + (mt ? money(mt) : '') + '</td><td></td></tr>'; })() : '') +
             '</tbody></table></div></div>';
           S.shot = {kind:'ca', rows:list.map(function(x){ return {name:x.n.ho_ten, id:x.n.ma_nv, ph:x.n.phong, cap:x.n.cap, cl:x.v.cl, sub:x.n.ma_nv + ' · ' + x.n.cap, cs:x.v.cs, ps:x.v.ps, gc:x.v.gc, mf:x.v.mf, tot:x.tot, tg:x.tg || 0, pct:x.pct, dat:x.dat}; }), scope:(S.phong.length === 1 ? short(S.phong[0]) : S.phong.length > 1 ? S.phong.length + ' phòng' : 'Tất cả phòng')};
@@ -3674,7 +3688,7 @@ showView('view-lookup-login');
           }
           return out;
         };
-        var base = (S.exp ? S.exp.name : 'kpi') + '_' + S.from + '_den_' + S.to;
+        var base = repName();
         var save = function(blob, name){ var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
         var canvasBlob = function(cv, type, q){ return new Promise(function(res){ cv.toBlob(res, type, q); }); };
         var shareOrSave = async function(files){
@@ -3748,7 +3762,7 @@ showView('view-lookup-login');
           put(1, 0, cs3('BÁO CÁO DOANH SỐ TEAM' + (S.shot.scope && S.shot.scope !== 'Tất cả phòng' ? ' — ' + S.shot.scope : ''), {b:true, sz:16, c:PAL.main}));
           put(2, 0, cs3('Thời gian:  ' + dm3(S.from) + ' - ' + dm3(S.to), {b:true, sz:11, c:PAL.text}));
           /* hàng tra cứu nhanh (hàng 4): nhập ID vào ô vàng cột C, các ô còn lại tự nhảy ra */
-          var lh = function(txt, i){ return cs3(txt, {b:true, c:PAL.main, fill:'E4DEFF', h:COLS[i][2] === 'r' ? 'right' : COLS[i][2] === 'c' ? 'center' : 'left', wrap:true, bd:{top:{style:'thin', color:{rgb:PAL.main}}}}); };
+          var lh = function(txt, i){ return cs3(txt, {b:true, c:PAL.head, fill:i === 9 ? '7A72B8' : PAL.main, h:'center', wrap:true}); };
           COLS.forEach(function(c, i){ put(3, i, lh(i === 0 ? 'STT' : i === 2 ? 'Nhập ID' : c[0], i)); });
           put(4, 0, cs3('', {h:'center', b:true, fill:PAL.soft, bd:{top:{style:'thin', color:{rgb:PAL.main}}, bottom:{style:'thin', color:{rgb:PAL.main}}}, z:'0'}));
           var lk = function(col){ var L = X.encode_col(col); return 'IFERROR(INDEX(' + L + '$' + FIRST + ':' + L + '$' + LAST + ',MATCH($C$4&"",$C$' + FIRST + ':$C$' + LAST + ',0)),"")'; };
@@ -3756,7 +3770,7 @@ showView('view-lookup-login');
           var lbd = {top:{style:'thin', color:{rgb:PAL.main}}, bottom:{style:'thin', color:{rgb:PAL.main}}};
           put(4, 1, cs3('', {f:lk(1), b:true, fill:PAL.soft, bd:lbd}));
           put(4, 2, cs3('', {h:'center', b:true, fill:PAL.input, bd:{top:{style:'medium', color:{rgb:'E0A800'}}, bottom:{style:'medium', color:{rgb:'E0A800'}}, left:{style:'medium', color:{rgb:'E0A800'}}, right:{style:'medium', color:{rgb:'E0A800'}}}}));
-          for(var lc = 3; lc < NC; lc++){ var isN = lc >= 5 && lc <= 12, isPc = false; put(4, lc, cs3('', {f:lk(lc), b:true, fill:PAL.soft, bd:lbd, h:COLS[lc][2] === 'r' ? 'right' : COLS[lc][2] === 'c' ? 'center' : 'left', z:isPc ? '0.0%' : isN ? ACC : undefined})); }
+          for(var lc = 3; lc < NC; lc++){ var isN = lc >= 5 && lc <= 12, isPc = false; var yb = {top:{style:'medium', color:{rgb:'E0A800'}}, bottom:{style:'medium', color:{rgb:'E0A800'}}, left:{style:'medium', color:{rgb:'E0A800'}}, right:{style:'medium', color:{rgb:'E0A800'}}}; put(4, lc, cs3('', {f:lk(lc), b:true, fill:lc === 10 ? PAL.input : PAL.soft, c:lc === 10 ? PAL.bad : undefined, bd:lc === 10 ? yb : lbd, h:COLS[lc][2] === 'r' ? 'right' : COLS[lc][2] === 'c' ? 'center' : 'left', z:isPc ? '0.0%' : isN ? ACC : undefined})); }
           
           COLS.forEach(function(c, i){ put(6, i, cs3(c[0], {b:true, c:PAL.head, fill:i === 9 ? '7A72B8' : PAL.main, h:'center', wrap:true})); });
           var tot3 = {miss:0, cs:0, ps:0, gc:0, mf:0, cl:0, tot:0, tg:0, tgTot:0, dat:0, n:0};
@@ -3790,7 +3804,7 @@ showView('view-lookup-login');
           ws3['!autofilter'] = {ref:X.encode_range({s:{r:5, c:0}, e:{r:TOTR - 2, c:NC - 1}})};
           ws3['!pageSetup'] = {orientation:'landscape', fitToWidth:1, fitToHeight:0}; ws3['!sheetPr'] = {pageSetUpPr:{fitToPage:true}};
           var wb3 = X.book_new(); X.book_append_sheet(wb3, ws3, 'KPI'); wb3.Workbook = {CalcPr:{fullCalcOnLoad:true}};
-          var fn3 = 'bao_cao_doanh_so_team_' + S.from + '_den_' + S.to + '.xlsx';
+          var fn3 = repName() + '.xlsx';
           var plain3 = function(){ XLSX.writeFile(wb3, fn3); };
           if(!window.JSZip){ plain3(); return true; }
           try {
@@ -3841,9 +3855,9 @@ showView('view-lookup-login');
           ws['!autofilter'] = {ref:XLSX.utils.encode_range({s:{r:3, c:0}, e:{r:3 + R2.length, c:nc - 1}})};
           ws['!pageSetup'] = {orientation:'landscape', fitToWidth:1, fitToHeight:0}; ws['!sheetPr'] = {pageSetUpPr:{fitToPage:true}};
           var wb2 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2, ws, 'KPI');
-          XLSX.writeFile(wb2, (S.exp ? S.exp.name : 'kpi') + '_' + S.from + '_den_' + S.to + '.xlsx'); return true;
+          XLSX.writeFile(wb2, repName() + '.xlsx'); return true;
         }
-        if(t.id === 'kvXls' && S.exp){ var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(S.exp.aoa), 'KPI'); XLSX.writeFile(wb, S.exp.name + '_' + S.from + '_den_' + S.to + '.xlsx'); return true; }
+        if(t.id === 'kvXls' && S.exp){ var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(S.exp.aoa), 'KPI'); XLSX.writeFile(wb, repName() + '.xlsx'); return true; }
         return false;
       };
       return S;
@@ -3858,6 +3872,37 @@ showView('view-lookup-login');
       if(!isStaffUI()){ draw(); return; }
       await KV.init(); K.ky = KV.ky; await KV.load(K.ky);
     };
+
+    function ctAt(k, l){ return K.cts && K.cts[k] && K.cts[k][l] != null ? Number(K.cts[k][l]) : ctInherit(k, l); }
+    function empLabel(e){ return e.name + ' · ' + e.code + ' · ' + e.level; }
+    function riengHtml(){
+      var h = '<div class="panel" style="margin-bottom:16px;"><div class="panel-head" style="padding:14px 20px 6px;"><div class="panel-title">Chỉ tiêu riêng cho từng người</div></div><div style="padding:6px 20px 16px;">';
+      if(K.riengErr){ return h + '<div class="callout"><div>⚠️</div><div>' + K.riengErr + '</div></div></div></div>'; }
+      if(!K.rieng) return h + '<div style="color:var(--text-muted);padding:8px 0;">Đang tải...</div></div></div>';
+      var emps = (LIVE.emp || []).filter(function(e){ return e.status !== 'Offboarding'; }), kys = ctKys();
+      h += '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.7;">Dùng khi một người có chỉ tiêu khác chỉ tiêu của cấp (ví dụ bù KPI của quý trước). <b>Chỉ áp dụng đúng tháng đã chọn</b>; tháng không đặt thì tính theo chỉ tiêu của cấp. Xem theo quý thì chỉ tiêu quý = tổng 3 tháng (tháng có đặt riêng thì dùng số riêng).</div>' +
+        '<datalist id="rgList">' + emps.map(function(e){ return '<option value="' + esc(empLabel(e)) + '"></option>'; }).join('') + '</datalist>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">' +
+        '<label style="font-size:12px;color:var(--text-muted);">Nhân sự (gõ tên hoặc ID)<br><input class="input" id="rgQ" list="rgList" placeholder="VD: Nguyễn Văn A hoặc 8407" style="width:260px;"></label>' +
+        '<label style="font-size:12px;color:var(--text-muted);">Tháng<br><select class="select" id="rgKy" style="width:190px;">' + kys.map(function(k){ return '<option value="' + k + '"' + (k === (K.rgKy || K.ky) ? ' selected' : '') + '>T' + k.slice(5) + '/' + k.slice(0, 4) + ' (' + kyLabel(k) + ')</option>'; }).join('') + '</select></label>' +
+        '<label style="font-size:12px;color:var(--text-muted);">Chỉ tiêu riêng (đồng)<br><input class="input" id="rgV" placeholder="VD: 30.000.000" inputmode="numeric" style="width:160px;"></label>' +
+        '<label style="font-size:12px;color:var(--text-muted);">Ghi chú<br><input class="input" id="rgN" placeholder="VD: bù KPI Quý 3" style="width:200px;"></label>' +
+        '<button class="btn btn-primary" id="rgAdd">Thêm / cập nhật</button></div><div id="rgHint" style="font-size:12.5px;color:var(--accent-dark);margin:8px 0 0;min-height:18px;"></div>';
+      var rows = [];
+      Object.keys(K.rieng).forEach(function(ma){ Object.keys(K.rieng[ma] || {}).forEach(function(k){ rows.push({ma:ma, k:k, e:K.rieng[ma][k]}); }); });
+      rows.sort(function(a, b){ return b.k.localeCompare(a.k) || a.ma.localeCompare(b.ma); });
+      var byCode = {}; (LIVE.emp || []).forEach(function(e){ byCode[e.code] = e; });
+      h += '<div style="margin-top:14px;font-weight:600;font-size:13px;">Đang đặt riêng (' + rows.length + ')</div>';
+      if(!rows.length) h += '<div style="color:var(--text-muted);font-size:13px;padding:6px 0;">Chưa có ai.</div>';
+      else h += '<div style="overflow-x:auto;"><table class="kvt" style="margin-top:6px;"><thead><tr><th>Tháng</th><th>Tên</th><th>ID</th><th>Cấp</th><th class="num">Chỉ tiêu riêng</th><th class="num">Chỉ tiêu theo cấp</th><th>Ghi chú</th><th></th></tr></thead><tbody>' +
+        rows.map(function(r){ var e = byCode[r.ma] || {}; return '<tr><td style="white-space:nowrap;">T' + r.k.slice(5) + '/' + r.k.slice(0, 4) + '</td><td><b>' + esc(e.name || r.ma) + '</b></td><td>' + esc(r.ma) + '</td><td>' + esc(e.level || '') + '</td><td class="num" style="font-weight:700;color:var(--accent-dark);">' + ctFmt(r.e.v) + '</td><td class="num sub">' + (e.level && CFG.levels[e.level] ? ctFmt(ctAt(r.k, e.level)) : '—') + '</td><td>' + esc(r.e.note || '') + '</td><td><button class="btn btn-secondary rg-del" data-m="' + esc(r.ma) + '" data-k="' + r.k + '" style="height:28px;padding:0 10px;">Xóa</button></td></tr>'; }).join('') + '</tbody></table></div>';
+      return h + '</div></div>';
+    }
+    async function riengSave(map, okMsg){
+      var r = await SBC.rpc('hr_chi_tieu_rieng_set', {p_val:map});
+      if(r.error){ K.err = r.error.code === 'PGRST202' ? 'Chưa chạy file kpi_phan_quyen.sql (bản mới)' : dbErr(r.error); } else { K.err = ''; K.rieng = map; K.msg = okMsg; KV.data = null; }
+      draw();
+    }
     function draw(){
       var h = '';
       if(!isStaffUI()){ box.innerHTML = h + '<div class="panel"><div style="padding:28px 22px;text-align:center;color:var(--text-muted);font-size:13.5px;">Trang này chỉ dùng được khi đã đăng nhập.</div></div>'; return; }
@@ -3879,15 +3924,42 @@ showView('view-lookup-login');
             '</tbody></table></div><div style="margin-top:12px;"><button class="btn btn-primary" id="dkCtSave">Lưu chỉ tiêu</button></div>';
         }
         h += '</div></div>';
+        h += riengHtml();
         box.innerHTML = h; return;
       }
       box.innerHTML = h + KV.html(); KV.after();
     }
     box.addEventListener('input', function(ev){
-      var i = ev.target; if(i.classList && i.classList.contains('dk-ctm')){ var d = i.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); i.value = d ? viNum(parseInt(d, 10), 0) : ''; return; }
+      var i = ev.target; if(i.id === 'rgV'){ var d0 = i.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); i.value = d0 ? viNum(parseInt(d0, 10), 0) : ''; return; }
+      if(i.classList && i.classList.contains('dk-ctm')){ var d = i.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); i.value = d ? viNum(parseInt(d, 10), 0) : ''; return; }
       KV.input(ev); });
-    box.addEventListener('change', function(ev){ KV.change(ev); });
+    function $g(id){ return document.getElementById(id); }
+    function findEmp(txt){
+      var q = String(txt || '').trim().toLowerCase(); if(!q) return null;
+      var all = (LIVE.emp || []).filter(function(e){ return e.status !== 'Offboarding'; });
+      return all.filter(function(e){ return empLabel(e).toLowerCase() === q; })[0] || all.filter(function(e){ return String(e.code).toLowerCase() === q || (e.msn && String(e.msn).toLowerCase() === q); })[0] || null;
+    }
+    box.addEventListener('change', function(ev){
+      var t = ev.target;
+      if(t && (t.id === 'rgQ' || t.id === 'rgKy')){
+        K.rgKy = ($g('rgKy') || {}).value || K.rgKy; var e = findEmp(($g('rgQ') || {}).value), hint = $g('rgHint');
+        if(hint) hint.textContent = e ? (CFG.levels[e.level] ? 'Chỉ tiêu theo cấp ' + e.level + ' tháng này: ' + ctFmt(ctAt(K.rgKy || K.ky, e.level)) + ' đồng' : 'Cấp ' + e.level + ' chưa có chỉ tiêu theo cấp') : '';
+        return;
+      }
+      KV.change(ev); });
     box.addEventListener('click', async function(ev){
+      var rd = ev.target.closest('.rg-del'); if(rd){
+        var m0 = JSON.parse(JSON.stringify(K.rieng || {})), ma0 = rd.getAttribute('data-m'), k0 = rd.getAttribute('data-k');
+        if(m0[ma0]){ delete m0[ma0][k0]; if(!Object.keys(m0[ma0]).length) delete m0[ma0]; }
+        await riengSave(m0, 'Đã xóa chỉ tiêu riêng.'); return;
+      }
+      if(ev.target.closest('#rgAdd')){
+        var e = findEmp($g('rgQ').value), ky = $g('rgKy').value, vs = $g('rgV').value.replace(/\D/g, ''), v = vs ? parseInt(vs, 10) : 0;
+        if(!e){ K.err = 'Chưa chọn đúng nhân sự. Hãy chọn trong danh sách gợi ý khi gõ tên hoặc ID.'; draw(); return; }
+        if(!(v >= 1000000)){ K.err = 'Chỉ tiêu riêng phải từ 1.000.000 đồng trở lên (nhập đủ như 30.000.000).'; draw(); return; }
+        var mp = JSON.parse(JSON.stringify(K.rieng || {})); (mp[e.code] || (mp[e.code] = {}))[ky] = {v:v, note:($g('rgN').value || '').trim()};
+        K.rgKy = ky; await riengSave(mp, 'Đã lưu chỉ tiêu riêng cho ' + e.name + ' tháng T' + ky.slice(5) + '/' + ky.slice(0, 4) + ': ' + ctFmt(v) + ' đồng.'); return;
+      }
       if(ev.target.closest('#kvSet')){ K.tab = 'ct'; K.msg = ''; K.ctAdd = 0; draw(); if(!K.cts) loadCts(); return; }
       if(ev.target.closest('#dkBack')){ K.tab = 'kq'; K.msg = ''; draw(); if(!KV.data) LIVE.loadDsk(); return; }
       var tb = ev.target.closest('.tab-strip-item[data-dtab]'); if(tb){ var tn = tb.getAttribute('data-dtab'); if(tn === 'imp'){ var ni = document.querySelector('.nav-item[data-page="import"]'); if(ni) ni.click(); } else { K.tab = tn; K.msg = ''; draw(); if(tn === 'ct' && !K.cts) loadCts(); if(tn === 'kq' && !KV.data) LIVE.loadDsk(); } return; }
@@ -4442,7 +4514,7 @@ showView('view-lookup-login');
     var sum = tot.reduce(function(a, b){ return a + b; }, 0), tg = 0, tgTot = 0, nTg = 0, nDat = 0;
     units.forEach(function(u){ if(u.tg > 0){ tg += u.tg; tgTot += u.tot; nTg++; if(u.dat) nDat++; } });
     var L = n - 1, best = 0; tot.forEach(function(v, i){ if(v > tot[best]) best = i; });
-    var lead = null; units.forEach(function(u){ if(!lead || val[u.key][L] > val[lead.key][L]) lead = u; });
+    var lead = null; units.forEach(function(u){ if(!lead || u.tot > lead.tot) lead = u; });
     var chg = L > 0 && tot[L - 1] > 0 ? (tot[L] - tot[L - 1]) / tot[L - 1] : null;
     return {byPh:byPh, word:byPh ? 'phòng' : 'người', days:days, n:n, units:units, val:val, tot:tot, cmax:cmax, sum:sum, tg:tg, tgTot:tgTot, nTg:nTg, nDat:nDat, L:L, best:best, lead:lead, chg:chg, C:C};
   }
@@ -4474,8 +4546,8 @@ showView('view-lookup-login');
     var L = G.L, lastD = dm(G.days[L]), best = G.days[G.best], pctT = G.tg > 0 ? G.tgTot / G.tg : null;
     var c1 = card('₫', '#6D28D9', '#EFE7FD', 'Tổng KPI ' + (K.span === 'quy' ? 'quý' : 'tháng'), big(G.sum), 'Cao nhất ' + dm(best) + ': ' + big(G.tot[G.best]), '', spark(G.tot, '#6D28D9'));
     var c2 = card('◎', '#0F8F6B', '#DDF5EC', 'Hoàn thành chỉ tiêu', pctT == null ? '—' : pct(pctT, 1), pctT == null ? 'Chưa có chỉ tiêu' : big(G.tgTot) + ' / ' + big(G.tg), pctT == null ? '' : '<div style="position:absolute;left:16px;right:16px;bottom:10px;height:5px;border-radius:3px;background:var(--border);"><div style="height:5px;border-radius:3px;width:' + Math.min(100, Math.round(pctT * 100)) + '%;background:#10B981;"></div></div>');
-    var ld = G.lead && G.val[G.lead.key][L] > 0 ? G.lead : null;
-    var c3 = card('★', '#B45309', '#FEF0D0', G.byPh ? 'Phòng dẫn đầu ' + lastD : 'Dẫn đầu ' + lastD, ld ? esc2(ld.label) : '—', ld ? big(G.val[ld.key][L]) : '');
+    var ld = G.lead && G.lead.tot > 0 ? G.lead : null, per = K.span === 'quy' ? 'quý' : 'tháng';
+    var c3 = card('★', '#B45309', '#FEF0D0', (G.byPh ? 'Phòng dẫn đầu ' : 'Dẫn đầu ') + per, ld ? esc2(ld.label) : '—', ld ? big(ld.tot) : '');
     var c4 = G.nTg ? card('▦', '#BE185D', '#FDE4EE', G.byPh ? 'Phòng đạt chỉ tiêu' : 'Người đạt chỉ tiêu', G.nDat + ' <span style="font-size:15px;color:var(--text-muted);font-weight:600;">/ ' + G.nTg + '</span>', pct(G.nDat / G.nTg, 0) + ' tổng số', '<div style="position:absolute;left:16px;right:16px;bottom:10px;height:5px;border-radius:3px;background:#F3B6C8;"><div style="height:5px;border-radius:3px;width:' + Math.round(G.nDat / G.nTg * 100) + '%;background:#10B981;"></div></div>') : card('▦', '#BE185D', '#FDE4EE', 'Đạt chỉ tiêu', '—', 'Chưa có chỉ tiêu');
     if(K.data && (K.data.vai === 'NV' || K.data.vai === 'CTV')){
       var R = DS.rk, ok = R && R.ok && R.hang_phong;
@@ -4748,7 +4820,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.26';
+  var V = 'v3.31';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
