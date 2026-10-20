@@ -3782,7 +3782,7 @@ showView('view-lookup-login');
         b = t.closest('.kv-mode'); if(b){ S.mode = b.getAttribute('data-m'); cfg.redraw(); return true; }
         b = t.closest('.kv-all'); if(b){ if(S.span !== 'ky'){ S.load(S.ky); return true; } var f = fullRange(); S.from = f.from; S.to = f.to; cfg.redraw(); return true; }
         b = t.closest('.kv-quy'); if(b){ if(S.span === 'quy'){ var fq = fullRange(); S.from = fq.from; S.to = fq.to; cfg.redraw(); return true; } S.span = 'quy'; S.from = ''; S.to = ''; S.load(); return true; }
-        b = t.closest('.kv-lastw'); if(b){ var f3 = fullRange(), pp = f3.to.split('-'), dt = new Date(Date.UTC(+pp[0], +pp[1] - 1, +pp[2])), dw = (dt.getUTCDay() + 6) % 7; dt = new Date(dt.getTime() - dw * 864e5); var mon = dt.getUTCFullYear() + '-' + ('0' + (dt.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + dt.getUTCDate()).slice(-2); S.from = mon < f3.from ? f3.from : mon; S.to = f3.to; cfg.redraw(); return true; }
+        b = t.closest('.kv-lastw'); if(b){ var f3 = fullRange(), pp = f3.to.split('-'), dt = new Date(Date.UTC(+pp[0], +pp[1] - 1, +pp[2])), dw = (dt.getUTCDay() + 6) % 7, iso3 = function(d){ return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + d.getUTCDate()).slice(-2); }; var mon, sun; if(dw >= 4){ mon = new Date(dt.getTime() - dw * 864e5); sun = dt; } else { mon = new Date(dt.getTime() - (dw + 7) * 864e5); sun = new Date(mon.getTime() + 6 * 864e5); } var a3 = iso3(mon), z3 = iso3(sun); S.from = a3 < f3.from ? f3.from : a3; S.to = z3 > f3.to ? f3.to : z3; if(S.from > S.to){ S.from = f3.from; S.to = f3.to; } cfg.redraw(); return true; }
         b = t.closest('.kv-last'); if(b){ var f2 = fullRange(); S.from = S.to = f2.to; cfg.redraw(); return true; }
         b = t.closest('.kv-ph'); if(b){ S.phong = [b.getAttribute('data-p')]; S.mode = 'canhan'; cfg.redraw(); return true; }
         b = t.closest('.kv-th'); if(b){ var key = b.getAttribute('data-s'), kk = b.getAttribute('data-k'), cur = S.sort[key] || {k:'tot', d:-1}; S.sort[key] = cur.k === kk ? {k:kk, d:-cur.d} : {k:kk, d:/^(ten|id|phong|cap|tp)$/.test(kk) ? 1 : -1}; cfg.redraw(); return true; }
@@ -4912,7 +4912,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.38';
+  var V = 'v3.40';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -4994,6 +4994,7 @@ showView('view-lookup-login');
       (L.imp ? '<button class="btn btn-primary" id="lnGo"' + (L.busy ? ' disabled' : '') + '>' + (L.busy ? 'Đang nhập...' : 'Nhập ' + L.imp.rows.length + ' dòng') + '</button>' : '') + '</div>';
     if(L.imp){ h += '<div style="font-size:12.5px;margin-top:8px;">Đọc được <b>' + L.imp.rows.length + '</b> dòng từ ' + L.imp.files + ' file' + (L.imp.bad ? ' · <span style="color:#DC2626;">bỏ qua ' + L.imp.bad + ' dòng thiếu thông tin</span>' : '') + '. Ngày đáo hạn từ <b>' + dmy(L.imp.min) + '</b> đến <b>' + dmy(L.imp.max) + '</b>.</div>'; }
     if(L.dot && L.dot.length) h += '<div style="margin-top:12px;font-size:12.5px;color:var(--text-muted);">Đã nhập: ' + L.dot.map(function(d){ return '<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;">Chốt ' + (d.chot ? dmy(d.chot) : 'không rõ') + ' (' + d.so + ' dòng) <button class="btn btn-secondary ln-xoa" data-c="' + (d.chot || '') + '" style="padding:1px 8px;font-size:11.5px;">Xóa</button></span>'; }).join('') + '</div>';
+    h += '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-secondary" id="lnDon">Dọn dữ liệu cũ (quá hạn trên 30 ngày)</button><button class="btn btn-secondary" id="lnDonAll" style="color:#B91C1C;">Xóa toàn bộ khoản vay đến hạn</button></div>';
     return h + '</div></div>';
   }
   LIVE.loanDraw = function(){
@@ -5080,6 +5081,12 @@ showView('view-lookup-login');
         L.busy = false; await LIVE.loanLoad(); return;
       } catch(e){ L.err = (e && e.code === 'PGRST202') ? 'Chưa chạy file dao_han.sql trên Supabase' : dbErr(e); }
       L.busy = false; LIVE.loanDraw(); return;
+    }
+    if(b.id === 'lnDon' || b.id === 'lnDonAll'){
+      var all = b.id === 'lnDonAll'; if(!window.confirm(all ? 'Xóa TOÀN BỘ dữ liệu khoản vay đến hạn? Không khôi phục được.' : 'Xóa các dòng đã quá hạn trên 30 ngày?')) return;
+      var r3 = all ? await SBC.rpc('hr_dao_han_xoa_het') : await SBC.rpc('hr_dao_han_don', {p_ngay:30});
+      if(r3.error){ L.err = (r3.error.code === 'PGRST202') ? 'Chưa chạy lại file dao_han.sql (bản mới) trên Supabase' : dbErr(r3.error); LIVE.loanDraw(); return; }
+      L.msg = 'Đã xóa ' + ((r3.data && r3.data.xoa) || 0) + ' dòng.'; await LIVE.loanLoad(); return;
     }
     if(b.classList.contains('ln-xoa')){
       var c = b.getAttribute('data-c'); if(!window.confirm('Xóa toàn bộ dữ liệu đáo hạn của đợt chốt ' + (c ? dmy(c) : 'không rõ') + '?')) return;
