@@ -727,6 +727,11 @@ table:has(#empBody) td.emp-no,table:has(#empBody) th.emp-no{width:34px;text-alig
 .kvw table.kvt-ca thead th{white-space:normal;line-height:1.15;vertical-align:bottom;}
 .kvw table.kvt-ca tbody td,.kvw table.kvt-ca thead th{padding-left:4px !important;padding-right:4px !important;}
 .kvw table.kvt-ca td.num{white-space:nowrap;}
+/* điện thoại / máy cảm ứng: bấm thẳng vào ô ngày để mở lịch của máy */
+@media (pointer:coarse){
+  .dd-wrap .dd-native{position:absolute !important;left:0;top:0;right:0;bottom:0;width:100% !important;height:100% !important;opacity:0;pointer-events:auto;z-index:3;font-size:16px;margin:0 !important;}
+  .dd-wrap .dd-btn{z-index:1;pointer-events:none;}
+}
 
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
@@ -3646,7 +3651,7 @@ showView('view-lookup-login');
           (canPhong() ? '<div class="kv-seg"><button class="kv-mode' + (S.mode === 'phong' ? ' on' : '') + '" data-m="phong" title="Xem KPI theo phòng">Phòng</button><button class="kv-mode' + (S.mode === 'canhan' ? ' on' : '') + '" data-m="canhan">Cá nhân</button></div>' : '') +
           '<label style="font-size:13px;display:flex;align-items:center;gap:5px;">Từ <input type="date" class="input" id="kvFrom" min="' + rg.tu + '" max="' + rg.den + '" value="' + S.from + '"></label>' +
           '<label style="font-size:13px;display:flex;align-items:center;gap:5px;">đến <input type="date" class="input" id="kvTo" min="' + rg.tu + '" max="' + rg.den + '" value="' + S.to + '"></label>' +
-          '<button class="btn btn-secondary kv-last">Gần nhất</button>' + (function(){ var dc = dayCount(rg); return '<span class="kv-days ' + dc.state + '" title="Ngày làm việc trong ' + (S.span === 'quy' ? 'quý' : 'tháng') + ' (trừ thứ 7, chủ nhật và ngày nghỉ đã cài)">' + (dc.state === 'pre' ? '⏳ Chưa bắt đầu · ' + dc.tot + ' ngày' : dc.state === 'end' ? '🏁 Đã kết thúc · ' + dc.tot + ' ngày' : '🔥 <b>' + dc.done + '/' + dc.tot + '</b> · còn <b>' + dc.left + '</b>') + '</span>'; })() +
+          '<button class="btn btn-secondary kv-last">Ngày gần nhất</button><button class="btn btn-secondary kv-lastw">Tuần gần nhất</button>' + (function(){ var dc = dayCount(rg); return '<span class="kv-days ' + dc.state + '" title="Ngày làm việc trong ' + (S.span === 'quy' ? 'quý' : 'tháng') + ' (trừ thứ 7, chủ nhật và ngày nghỉ đã cài)">' + (dc.state === 'pre' ? '⏳ Chưa bắt đầu · ' + dc.tot + ' ngày' : dc.state === 'end' ? '🏁 Đã kết thúc · ' + dc.tot + ' ngày' : '🔥 <b>' + dc.done + '/' + dc.tot + '</b> · còn <b>' + dc.left + '</b>') + '</span>'; })() +
           '<span style="font-size:12.5px;color:var(--text-muted);">' + (S.span === 'quy' ? quyLabel(S.ky).replace(/\s*\(.*\)/, '') : '') + (isFull ? '' : ' · ' + dm(S.from) + ' → ' + dm(S.to)) + (isFull ? '' : ' <a href="#" class="kv-reset" style="color:var(--accent-dark);">· Xem lại cả ' + (S.span === 'quy' ? 'quý' : 'tháng') + '</a>') + '</span>');
         /* bảng */
         if(S.mode === 'phong'){
@@ -3777,6 +3782,7 @@ showView('view-lookup-login');
         b = t.closest('.kv-mode'); if(b){ S.mode = b.getAttribute('data-m'); cfg.redraw(); return true; }
         b = t.closest('.kv-all'); if(b){ if(S.span !== 'ky'){ S.load(S.ky); return true; } var f = fullRange(); S.from = f.from; S.to = f.to; cfg.redraw(); return true; }
         b = t.closest('.kv-quy'); if(b){ if(S.span === 'quy'){ var fq = fullRange(); S.from = fq.from; S.to = fq.to; cfg.redraw(); return true; } S.span = 'quy'; S.from = ''; S.to = ''; S.load(); return true; }
+        b = t.closest('.kv-lastw'); if(b){ var f3 = fullRange(), pp = f3.to.split('-'), dt = new Date(Date.UTC(+pp[0], +pp[1] - 1, +pp[2])), dw = (dt.getUTCDay() + 6) % 7; dt = new Date(dt.getTime() - dw * 864e5); var mon = dt.getUTCFullYear() + '-' + ('0' + (dt.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + dt.getUTCDate()).slice(-2); S.from = mon < f3.from ? f3.from : mon; S.to = f3.to; cfg.redraw(); return true; }
         b = t.closest('.kv-last'); if(b){ var f2 = fullRange(); S.from = S.to = f2.to; cfg.redraw(); return true; }
         b = t.closest('.kv-ph'); if(b){ S.phong = [b.getAttribute('data-p')]; S.mode = 'canhan'; cfg.redraw(); return true; }
         b = t.closest('.kv-th'); if(b){ var key = b.getAttribute('data-s'), kk = b.getAttribute('data-k'), cur = S.sort[key] || {k:'tot', d:-1}; S.sort[key] = cur.k === kk ? {k:kk, d:-cur.d} : {k:kk, d:/^(ten|id|phong|cap|tp)$/.test(kk) ? 1 : -1}; cfg.redraw(); return true; }
@@ -4752,6 +4758,8 @@ showView('view-lookup-login');
       if(o.length === 10){ var iso = toIso(o); if(iso && inRange(iso)){ nGet.set.call(el, iso); fire(); } }
       else if(!o){ nGet.set.call(el, ''); fire(); }
     });
+    try { if(window.matchMedia && matchMedia('(pointer:coarse)').matches){ txt.readOnly = true; el.tabIndex = 0; } } catch(e){}
+    el.addEventListener('input', sync);
     txt.addEventListener('blur', function(){ sync(); });
     btn.addEventListener('click', function(){ try { if(el.showPicker) el.showPicker(); else el.focus(); } catch(e){ el.focus(); } });
     el.addEventListener('change', sync);
@@ -4904,7 +4912,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.36';
+  var V = 'v3.38';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
