@@ -3904,13 +3904,13 @@ showView('view-lookup-login');
     };
 
     /* ================= Trang "KPI & KPI gốc" (Admin + Leader) ================= */
-    var KV = LIVE.kpiMake({args:function(){ return LIVE.memArgs ? LIVE.memArgs() : {}; }, redraw:function(){ draw(); }, onKy:function(k){ K.ky = k; LIVE.loadDsk(); }, canDefault:function(){ return adminReal(); }, toolbarExtra:function(){ return adminReal() ? '<button class="btn" id="kvSet" title="Cài đặt chỉ tiêu (chỉ Admin)" style="padding:7px 11px;">⚙</button>' : ''; }});
+    var KV = LIVE.kpiMake({args:function(){ return LIVE.memArgs ? LIVE.memArgs() : {}; }, redraw:function(){ draw(); }, onKy:function(k){ K.ky = k; LIVE.loadDsk(k); }, canDefault:function(){ return adminReal(); }, toolbarExtra:function(){ return adminReal() ? '<button class="btn" id="kvSet" title="Cài đặt chỉ tiêu (chỉ Admin)" style="padding:7px 11px;">⚙</button>' : ''; }});
     function isStaffUI(){ return !!LIVE.member || (LIVE.on && (LIVE.role === 'admin' || LIVE.role === 'leader')); }
     LIVE.resetDsk = function(){ KV.data = null; KV.from = ''; KV.to = ''; KV.phong = []; KV.cap = []; KV.msOpen = ''; KV.st = ''; KV.q = ''; KV.err = ''; KV.mode = 'phong'; KV.sort = {}; K.tab = 'kq'; KV.kyInit = false; };
     function adminReal(){ return !LIVE.member && LIVE.on && LIVE.role === 'admin' && !LIVE.viewAs; }
-    LIVE.loadDsk = async function(){
+    LIVE.loadDsk = async function(ky){
       if(!isStaffUI()){ draw(); return; }
-      await KV.init(); K.ky = KV.ky; await KV.load(K.ky);
+      await KV.init(); K.ky = (typeof ky === 'string' && ky) ? ky : KV.ky; await KV.load(K.ky);
     };
 
     function ctAt(k, l){ return K.cts && K.cts[k] && K.cts[k][l] != null ? Number(K.cts[k][l]) : ctInherit(k, l); }
@@ -4912,7 +4912,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.40';
+  var V = 'v3.41';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
