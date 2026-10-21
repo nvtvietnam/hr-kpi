@@ -1714,6 +1714,7 @@ showView('view-lookup-login');
     if(hr0 && !hr0.querySelector('th.emp-no')){ var thn = document.createElement('th'); thn.className = 'emp-no'; thn.textContent = '#'; thn.style.width = '36px'; hr0.insertBefore(thn, hr0.firstChild); thr = tblE.querySelectorAll('thead th'); }
     if(!tblE.__sortBound){ tblE.__sortBound = true; tblE.querySelector('thead').addEventListener('click', function(ev){ var th = ev.target.closest('th[data-sk]'); if(!th) return; var k = th.getAttribute('data-sk'), E = LIVE.empSort; if(E.k === k) E.d = -E.d; else { E.k = k; E.d = 1; } renderEmp(); }); }
     thr.forEach(function(th, i){ var k = KEYS[i]; if(!k) return; if(!th.getAttribute('data-l')) th.setAttribute('data-l', th.textContent.trim()); th.setAttribute('data-sk', k); th.style.cursor = 'pointer'; th.style.userSelect = 'none'; th.innerHTML = th.getAttribute('data-l') + ' <span style="opacity:' + (ES.k === k ? 1 : .35) + ';font-size:10px;">' + (ES.k === k ? (ES.d > 0 ? '▲' : '▼') : '⇅') + '</span>'; });
+    LIVE.empRows = rows;
     var body = document.getElementById('empBody');
     if(!rows.length) body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:28px;">Không có nhân sự phù hợp bộ lọc</td></tr>';
     else body.innerHTML = rows.slice(0,200).map(function(e, ix){
@@ -1807,7 +1808,22 @@ showView('view-lookup-login');
     if(t.getAttribute('data-pin') && LIVE.on){ LIVE.resetPin(t.getAttribute('data-pin')); return; }
     if(t.getAttribute('data-pin')) toast('Đã tạo PIN mới cho ' + t.getAttribute('data-pin') + ': ' + Math.floor(1000 + Math.random()*9000) + ' — gửi cho nhân sự (demo)');
   });
-  document.getElementById('btnEmpExport').addEventListener('click', function(){ toast('Xuất Excel: chưa nối dữ liệu thật'); });
+  document.getElementById('btnEmpExport').addEventListener('click', function(){
+    var rows = LIVE.empRows || LV();
+    if(!rows.length){ toast('Không có nhân sự nào để xuất'); return; }
+    if(typeof XLSX === 'undefined'){ toast('Chưa tải được thư viện xuất Excel, hãy tải lại trang'); return; }
+    var head = ['STT', 'Họ tên', 'ID', 'Mã nhân sự', 'ID môi giới', 'Phòng', 'Cấp', 'Loại CTV', 'Người giới thiệu', 'SĐT', 'Ngày vào', 'Ngày chính thức', 'Trạng thái', 'Ngày nghỉ', 'Lý do nghỉ'];
+    var aoa = [head].concat(rows.map(function(e, i){
+      var rf = e.ref ? ((empOfV(e.ref) || {}).name ? (empOfV(e.ref).name + ' (' + e.ref + ')') : e.ref) : '';
+      return [i + 1, e.name || '', e.code || '', e.msn || '', (e.ids || []).join(', '), e.dept || '', e.level || '', e.level === 'CTV' ? (e.ctvType === 'cu' ? 'Từng là NV' : 'Mới') : '', rf, String(e.phone || ''), e.start ? fmtDate(e.start) : '', e.promo ? fmtDate(e.promo) : '', e.status || '', e.leaveDate ? fmtDate(e.leaveDate) : '', e.why || ''];
+    }));
+    var ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [{wch:6}, {wch:26}, {wch:9}, {wch:12}, {wch:16}, {wch:18}, {wch:8}, {wch:12}, {wch:28}, {wch:14}, {wch:12}, {wch:14}, {wch:16}, {wch:12}, {wch:20}];
+    ws['!freeze'] = {xSplit:2, ySplit:1}; ws['!autofilter'] = {ref:'A1:' + XLSX.utils.encode_col(head.length - 1) + aoa.length};
+    var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Nhân sự');
+    var d = new Date(), p2 = function(n){ return ('0' + n).slice(-2); };
+    XLSX.writeFile(wb, 'Danh sách nhân sự ' + p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' + d.getFullYear() + '.xlsx');
+    toast('Đã xuất ' + rows.length + ' nhân sự (theo bộ lọc đang chọn)');
+  });
 
   /* ---------- KPI & KPI gốc ---------- */
   var kP = 'T10', kTab = 'result';
@@ -4914,7 +4930,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.42';
+  var V = 'v3.43';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
