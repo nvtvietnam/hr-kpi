@@ -446,8 +446,9 @@ td.num,th.num{text-align:right;}
 #view-admin-dashboard .nav-item:not([data-mem]),#view-admin-dashboard .nav-section-label{display:none !important;}
 .nav-sec{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8E88C2;padding:16px 14px 6px;}
 
-#memNav .only-leader{display:none !important;}
-#view-admin-dashboard.is-leader #memNav .only-leader{display:flex !important;}
+#memNav .only-leader,#memNav .only-mgr{display:none !important;}
+#view-admin-dashboard.is-mgr #memNav .only-mgr{display:flex !important;}
+#view-admin-dashboard.is-leader #memNav .only-leader,#view-admin-dashboard.is-leader #memNav .only-mgr{display:flex !important;}
 
 /* Bảng KPI gọn: vừa một màn hình, số tổng nổi bật, các mục thành phần chữ thường */
 .kvw table.kvt{width:100%;table-layout:auto;font-size:12.5px;}
@@ -4470,7 +4471,7 @@ showView('view-lookup-login');
       var box = document.createElement('div'); box.id = id;
       items.forEach(function(it){
         if(it === '-'){ var l = document.createElement('div'); l.className = 'nav-sec'; l.textContent = 'Quản trị'; box.appendChild(l); return; }
-        var d = document.createElement('div'); d.className = 'nav-item' + (it[0] === 'sbc' && !adminMode ? ' only-leader' : ''); d.setAttribute('data-mem', '1');
+        var d = document.createElement('div'); d.className = 'nav-item' + (it[0] === 'sbc' && !adminMode ? ' only-leader' : '') + (it[0] === 'sluong' && !adminMode ? ' only-mgr' : ''); d.setAttribute('data-mem', '1');
         if(it[0] !== 'ct') d.setAttribute('data-page', it[0]);
         d.innerHTML = (ICO[it[0]] || ICO.dsk) + ' ' + it[1];
         d.addEventListener('click', function(){
@@ -4551,6 +4552,7 @@ showView('view-lookup-login');
         el.innerHTML = head(TITLES[page], 'Chức năng này sắp có.') + holderMsg('<b style="color:var(--text);font-size:15px;">Sắp có</b><br>Chức năng đang được xây dựng, sẽ mở khi có dữ liệu.');
       } else if(page === 'sluong'){
         var L = M.luong || {}, hl = head('Bảng lương', 'Chỉ bạn xem được bảng lương của chính mình.');
+        if(M.kind !== 'leader' && M.kind !== 'admin' && !/^(GĐ|TP)/.test(M.cap || '')) return void (el.innerHTML = head('Bảng lương', '') + holderMsg('Trang này chỉ dành cho Owner, Leader và quản lý (TP/GĐ).'));
         if(M.kind !== 'pin') return void (el.innerHTML = hl + holderMsg(M.preview ? 'Bảng lương cá nhân không hiển thị trong chế độ xem thử.' : 'Bảng lương cá nhân xem bằng cách đăng nhập mã nhân sự + PIN.'));
         if(L.loading) return void (el.innerHTML = hl + '<div style="padding:24px;color:var(--text-muted);">Đang tải...</div>');
         if(L.err) return void (el.innerHTML = hl + holderMsg('⚠️ ' + esc(L.err)));
@@ -4618,7 +4620,7 @@ showView('view-lookup-login');
       M = {kind:o.kind, ma:o.ma || '', pin:o.pin || null, preview:!!o.preview, cap:o.cap || '', first:String(name || '').split(/\s+/).pop(), label:o.kind === 'leader' ? 'Giám đốc & Leader · xem toàn team' : (o.phong || '') + ' · ' + (o.cap || ''), scope:null, kpi:null, luong:null, q:'', ph:'', setup:true, err:''};
       LIVE.member = M; LIVE.viewAs = o.preview ? (o.kind === 'leader' ? 'leader' : 'member') : null;
       nameEl.textContent = name; roleEl.textContent = roleName(vai, o.cap);
-      adminView.classList.add('as-staff'); adminView.classList.toggle('is-leader', o.kind === 'leader');
+      adminView.classList.add('as-staff'); adminView.classList.toggle('is-leader', o.kind === 'leader'); adminView.classList.toggle('is-mgr', /^(GĐ|TP)/.test(o.cap || ''));
       if(bar){ bar.style.display = o.preview ? 'flex' : 'none'; var sp = bar.querySelector('span'); if(sp) sp.innerHTML = '👁 Đang xem thử với vai <b>' + esc(o.kind === 'leader' ? 'Leader' : (name + ' (' + o.cap + ')')) + '</b>'; }
       showView('view-admin-dashboard');
       if(LIVE.resetDsk) LIVE.resetDsk(); if(LIVE.resetLenh) LIVE.resetLenh(); if(LIVE.loanReset) LIVE.loanReset(); resetDash();
@@ -4626,7 +4628,7 @@ showView('view-lookup-login');
     };
     LIVE.exitMember = function(){
       if(!M) return; var wasPrev = M.preview, kind = M.kind;
-      adminView.classList.remove('as-staff'); adminView.classList.remove('as-leader'); adminView.classList.remove('is-leader');
+      adminView.classList.remove('as-staff'); adminView.classList.remove('as-leader'); adminView.classList.remove('is-leader'); adminView.classList.remove('is-mgr');
       var nameEl = adminView.querySelector('.sf-name'), roleEl = adminView.querySelector('.sf-role');
       if(saved){ nameEl.textContent = saved[0]; roleEl.textContent = saved[1]; saved = null; }
       if(bar) bar.style.display = 'none';
@@ -5022,7 +5024,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.46';
+  var V = 'v3.48';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
