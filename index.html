@@ -3519,6 +3519,10 @@ showView('view-lookup-login');
     function kyLabel(k){ var r = kyRange(k); return 'Tháng ' + (+k.slice(5)) + '/' + k.slice(0,4) + ' (' + dm(r.tu) + ' – ' + dm(r.den) + ')'; }
     function quyMonths(k){ var y = +k.slice(0,4), m = +k.slice(5), q = Math.ceil(m / 3), out = []; for(var i = 0; i < 3; i++) out.push(y + '-' + ('0' + (q * 3 - 2 + i)).slice(-2)); return out; }
     function quyRange(k){ var ms = quyMonths(k); return {tu:kyRange(ms[0]).tu, den:kyRange(ms[2]).den}; }
+    function namMonths(k){ var y = k.slice(0,4), out = []; for(var i = 1; i <= 12; i++) out.push(y + '-' + ('0' + i).slice(-2)); return out; }
+    function namRange(k){ var ms = namMonths(k); return {tu:kyRange(ms[0]).tu, den:kyRange(ms[11]).den}; }
+    function namLabel(k){ return 'Cả năm ' + k.slice(0,4) + ' (T1–T12)'; }
+    function spanRg(S){ return S.span === 'quy' ? quyRange(S.ky) : S.span === 'nam' ? namRange(S.ky) : kyRange(S.ky); }
     function quyLabel(k){ var ms = quyMonths(k); return 'Quý ' + Math.ceil(+k.slice(5) / 3) + '/' + k.slice(0,4) + ' (T' + ms[0].slice(5) + '–T' + ms[2].slice(5) + ')'; }
     function kyNext(k){ var y = +k.slice(0,4), m = +k.slice(5) + 1; if(m > 12){ m = 1; y++; } return y + '-' + ('0' + m).slice(-2); }
     function kyPrev(k){ var y = +k.slice(0,4), m = +k.slice(5) - 1; if(m < 1){ m = 12; y--; } return y + '-' + ('0' + m).slice(-2); }
@@ -3606,12 +3610,12 @@ showView('view-lookup-login');
         return CFG.levels[cap] ? CFG.levels[cap].std : 0;
       }
       function tgPerson(n, head){
-        var o = S.data && S.data.ct_rieng && S.data.ct_rieng[n.ma_nv], months = S.span === 'quy' ? quyMonths(S.ky) : [S.ky], any = false;
+        var o = S.data && S.data.ct_rieng && S.data.ct_rieng[n.ma_nv], months = S.span === 'quy' ? quyMonths(S.ky) : S.span === 'nam' ? namMonths(S.ky) : [S.ky], any = false;
         var sum = months.reduce(function(a, k){ var e = o && o[k]; if(e && e.v != null && Number(e.v) > 0){ any = true; return a + Number(e.v); } return a + (head ? 0 : ctFor(k, n.cap)); }, 0);
         return {tg:sum, rg:any};
       }
-      function tgOf(cap){ return S.span === 'quy' ? quyMonths(S.ky).reduce(function(a, k){ return a + ctFor(k, cap); }, 0) : ctFor(S.ky, cap); }
-      function repName(){ var y = S.ky.slice(0,4), m = +S.ky.slice(5); return 'Báo cáo doanh số ' + (S.span === 'quy' ? 'Q' + Math.ceil(m / 3) : 'T' + m) + '.' + y; }
+      function tgOf(cap){ return (S.span === 'quy' || S.span === 'nam') ? (S.span === 'quy' ? quyMonths(S.ky) : namMonths(S.ky)).reduce(function(a, k){ return a + ctFor(k, cap); }, 0) : ctFor(S.ky, cap); }
+      function repName(){ var y = S.ky.slice(0,4), m = +S.ky.slice(5); return 'Báo cáo doanh số ' + (S.span === 'quy' ? 'Q' + Math.ceil(m / 3) + '.' + y : S.span === 'nam' ? 'Năm ' + y : 'T' + m + '.' + y); }
       function short(p){ return String(p || '').replace(/^PHÒNG TVĐT /, ''); }
       function money(n){ return viNum(Math.round(+n || 0), 0); }
       function dmy(s){ var m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : s; }
@@ -3636,7 +3640,7 @@ showView('view-lookup-login');
       S.load = async function(ky){
         if(ky && ky !== S.ky){ S.ky = ky; S.span = 'ky'; S.from = ''; S.to = ''; } else if(ky){ S.span = 'ky'; S.from = ''; S.to = ''; }
         S.loading = true; S.err = ''; cfg.redraw();
-        var r = S.span === 'quy' ? quyRange(S.ky) : kyRange(S.ky), a = cfg.args() || {};
+        var r = spanRg(S), a = cfg.args() || {};
         try {
           var x = await SBC.rpc('hr_kpi_goi', {p_tu:r.tu, p_den:r.den, p_ma:a.ma || null, p_pin:a.pin || null});
           if(x.error){ if(x.error.code === 'PGRST202' || /Could not find|does not exist/i.test(x.error.message || '')) S.setup = false; else throw x.error; }
@@ -3667,8 +3671,8 @@ showView('view-lookup-login');
       };
       /* số liệu tổng cả kỳ (dùng cho Dashboard) */
       S.canPhong = canPhong;
-      S.range = function(){ return S.span === 'quy' ? quyRange(S.ky) : kyRange(S.ky); };
-      S.kyText = function(){ return S.span === 'quy' ? quyLabel(S.ky) : kyLabel(S.ky); };
+      S.range = function(){ return spanRg(S); };
+      S.kyText = function(){ return S.span === 'quy' ? quyLabel(S.ky) : S.span === 'nam' ? namLabel(S.ky) : kyLabel(S.ky); };
       S.kyOptions = function(){ return kyListLong(S.ky).map(function(k){ return {k:k, label:kyLabel(k) + (k === kyNow() ? ' · nay' : '') + (k === LIVE.kyDef ? ' · mặc định' : '')}; }); };
       S.stats = function(){
         if(!S.data || !S.days.length) return null;
@@ -3741,7 +3745,7 @@ showView('view-lookup-login');
         var h = '<div class="kvw">';
         var kySel = '<select class="select" id="kvKy" style="min-width:200px;font-weight:600;">' + kyListLong(S.ky).map(function(k){ return '<option value="' + k + '"' + (k === S.ky ? ' selected' : '') + '>' + kyLabel(k) + (k === kyNow() ? ' · nay' : '') + (k === LIVE.kyDef ? ' · mặc định' : '') + '</option>'; }).join('') + '</select>';
         var defBtn = cfg.canDefault && cfg.canDefault() && S.ky !== (LIVE.kyDef || kyNow()) ? '<button class="btn btn-secondary kv-def" style="font-size:12.5px;" title="Mọi tài khoản mở KPI sẽ vào tháng này">Đặt làm mặc định</button>' : '';
-        var spanSeg = '<div class="kv-seg" title="Tháng: so với chỉ tiêu tháng · Quý: cộng 3 tháng, so với tổng chỉ tiêu 3 tháng"><button class="kv-all' + (S.span === 'ky' ? ' on' : '') + '">Tháng</button><button class="kv-quy' + (S.span === 'quy' ? ' on' : '') + '">Quý</button></div>';
+        var spanSeg = '<div class="kv-seg" title="Tháng: so với chỉ tiêu tháng · Quý: cộng 3 tháng, so với tổng chỉ tiêu 3 tháng"><button class="kv-all' + (S.span === 'ky' ? ' on' : '') + '">Tháng</button><button class="kv-quy' + (S.span === 'quy' ? ' on' : '') + '">Quý</button><button class="kv-nam' + (S.span === 'nam' ? ' on' : '') + '">Năm</button></div>';
         var tail = defBtn + (cfg.toolbarExtra ? cfg.toolbarExtra() : '');
         var bar = function(tools){ return '<div class="panel kvbar" style="margin-bottom:12px;"><div style="padding:10px 16px;display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center;">' + kySel + spanSeg + (tools || '') + '<span style="flex:1;"></span>' + tail + '</div></div>'; };
         if(S.loading) return h + bar() + '<div style="padding:20px;color:var(--text-muted);">Đang tải số liệu...</div></div>';
@@ -3749,15 +3753,15 @@ showView('view-lookup-login');
         if(S.err) return h + bar() + '<div class="callout" style="margin-bottom:14px;"><div>⚠️</div><div>' + esc(S.err) + '</div></div></div>';
         if(!S.data) return h + bar() + '</div>';
         var D = S.data;
-        if(!S.days.length) return h + bar() + '<div class="panel"><div style="padding:24px 20px;color:var(--text-muted);font-size:13.5px;">' + (S.span === 'quy' ? 'Quý' : 'Tháng') + ' này chưa có số liệu doanh số.</div></div></div>';
-        var C = S.calc(), hasData = {}; C.phongs.forEach(function(x){ if(x.tot > 0) hasData[x.p.ten] = 1; }); var phOpts = (D.phong || []).map(function(p){ return p.ten; }).filter(function(n){ return !closedPh(n) || hasData[n]; }), rg = S.span === 'quy' ? quyRange(S.ky) : kyRange(S.ky), f = fullRange(), isFull = S.from === f.from && S.to === f.to;
+        if(!S.days.length) return h + bar() + '<div class="panel"><div style="padding:24px 20px;color:var(--text-muted);font-size:13.5px;">' + (S.span === 'quy' ? 'Quý' : S.span === 'nam' ? 'Năm' : 'Tháng') + ' này chưa có số liệu doanh số.</div></div></div>';
+        var C = S.calc(), hasData = {}; C.phongs.forEach(function(x){ if(x.tot > 0) hasData[x.p.ten] = 1; }); var phOpts = (D.phong || []).map(function(p){ return p.ten; }).filter(function(n){ return !closedPh(n) || hasData[n]; }), rg = spanRg(S), f = fullRange(), isFull = S.from === f.from && S.to === f.to;
         var inPh = function(n){ return !S.phong.length || S.phong.indexOf(n.phong) > -1; };
         h += bar(
           (canPhong() ? '<div class="kv-seg"><button class="kv-mode' + (S.mode === 'phong' ? ' on' : '') + '" data-m="phong" title="Xem KPI theo phòng">Phòng</button><button class="kv-mode' + (S.mode === 'canhan' ? ' on' : '') + '" data-m="canhan">Cá nhân</button></div>' : '') +
           '<label style="font-size:13px;display:flex;align-items:center;gap:5px;">Từ <input type="date" class="input" id="kvFrom" min="' + rg.tu + '" max="' + rg.den + '" value="' + S.from + '"></label>' +
           '<label style="font-size:13px;display:flex;align-items:center;gap:5px;">đến <input type="date" class="input" id="kvTo" min="' + rg.tu + '" max="' + rg.den + '" value="' + S.to + '"></label>' +
           '<button class="btn btn-secondary kv-last">Ngày gần nhất</button><button class="btn btn-secondary kv-lastw">Tuần gần nhất</button>' + (function(){ var dc = dayCount(rg); return '<span class="kv-days ' + dc.state + '" title="Ngày làm việc trong ' + (S.span === 'quy' ? 'quý' : 'tháng') + ' (trừ thứ 7, chủ nhật và ngày nghỉ đã cài)">' + (dc.state === 'pre' ? '⏳ Chưa bắt đầu · ' + dc.tot + ' ngày' : dc.state === 'end' ? '🏁 Đã kết thúc · ' + dc.tot + ' ngày' : '🔥 <b>' + dc.done + '/' + dc.tot + '</b> · còn <b>' + dc.left + '</b>') + '</span>'; })() +
-          '<span style="font-size:12.5px;color:var(--text-muted);">' + (S.span === 'quy' ? quyLabel(S.ky).replace(/\s*\(.*\)/, '') : '') + (isFull ? '' : ' · ' + dm(S.from) + ' → ' + dm(S.to)) + (isFull ? '' : ' <a href="#" class="kv-reset" style="color:var(--accent-dark);">· Xem lại cả ' + (S.span === 'quy' ? 'quý' : 'tháng') + '</a>') + '</span>');
+          '<span style="font-size:12.5px;color:var(--text-muted);">' + (S.span === 'quy' ? quyLabel(S.ky).replace(/\s*\(.*\)/, '') : S.span === 'nam' ? 'Năm ' + S.ky.slice(0,4) : '') + (isFull ? '' : ' · ' + dm(S.from) + ' → ' + dm(S.to)) + (isFull ? '' : ' <a href="#" class="kv-reset" style="color:var(--accent-dark);">· Xem lại cả ' + (S.span === 'quy' ? 'quý' : S.span === 'nam' ? 'năm' : 'tháng') + '</a>') + '</span>');
         /* bảng */
         if(S.mode === 'phong'){
           var pl = sortBy(C.phongs.filter(function(x){ return !(closedPh(x.p.ten) && !(x.tot > 0)); }).filter(function(x){ return S.grp === 'p' ? NH().phong.indexOf(x.p.ten) > -1 : S.grp === 'np' ? NH().phong.indexOf(x.p.ten) < 0 : true; }), 'phong', function(x, k){ return {ten:short(x.p.ten), tp:x.tp, so:x.so, cs:x.v.cs, ps:x.v.ps, gc:x.v.gc, mf:x.v.mf, tot:x.tot, tg:x.tg || null, pct:x.pct}[k]; }), T = ZERO(); pl.forEach(function(x){ T.cs += x.v.cs; T.ps += x.v.ps; T.gc += x.v.gc; T.mf += x.v.mf; });
@@ -3886,6 +3890,7 @@ showView('view-lookup-login');
         b = t.closest('.kv-def'); if(b){ S.setDef(); return true; }
         b = t.closest('.kv-mode'); if(b){ S.mode = b.getAttribute('data-m'); cfg.redraw(); return true; }
         b = t.closest('.kv-all'); if(b){ if(S.span !== 'ky'){ S.load(S.ky); return true; } var f = fullRange(); S.from = f.from; S.to = f.to; cfg.redraw(); return true; }
+        b = t.closest('.kv-nam'); if(b){ if(S.span === 'nam'){ var fn = fullRange(); S.from = fn.from; S.to = fn.to; cfg.redraw(); return true; } S.span = 'nam'; S.from = ''; S.to = ''; S.load(); return true; }
         b = t.closest('.kv-quy'); if(b){ if(S.span === 'quy'){ var fq = fullRange(); S.from = fq.from; S.to = fq.to; cfg.redraw(); return true; } S.span = 'quy'; S.from = ''; S.to = ''; S.load(); return true; }
         b = t.closest('.kv-lastw'); if(b){ var f3 = fullRange(), pp = f3.to.split('-'), dt = new Date(Date.UTC(+pp[0], +pp[1] - 1, +pp[2])), dw = (dt.getUTCDay() + 6) % 7, iso3 = function(d){ return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + d.getUTCDate()).slice(-2); }; var mon, sun; if(dw >= 4){ mon = new Date(dt.getTime() - dw * 864e5); sun = dt; } else { mon = new Date(dt.getTime() - (dw + 7) * 864e5); sun = new Date(mon.getTime() + 6 * 864e5); } var a3 = iso3(mon), z3 = iso3(sun); S.from = a3 < f3.from ? f3.from : a3; S.to = z3 > f3.to ? f3.to : z3; if(S.from > S.to){ S.from = f3.from; S.to = f3.to; } cfg.redraw(); return true; }
         b = t.closest('.kv-last'); if(b){ var f2 = fullRange(); S.from = S.to = f2.to; cfg.redraw(); return true; }
@@ -4725,16 +4730,16 @@ showView('view-lookup-login');
   }
   function cards(){
     var L = G.L, lastD = dm(G.days[L]), best = G.days[G.best], pctT = G.tg > 0 ? G.tgTot / G.tg : null;
-    var c1 = card('₫', '#6D28D9', '#EFE7FD', 'Tổng KPI ' + (K.span === 'quy' ? 'quý' : 'tháng'), big(G.sum), 'Cao nhất ' + dm(best) + ': ' + big(G.tot[G.best]), '', spark(G.tot, '#6D28D9'));
+    var c1 = card('₫', '#6D28D9', '#EFE7FD', 'Tổng KPI ' + (K.span === 'quy' ? 'quý' : K.span === 'nam' ? 'năm' : 'tháng'), big(G.sum), 'Cao nhất ' + dm(best) + ': ' + big(G.tot[G.best]), '', spark(G.tot, '#6D28D9'));
     var c2 = card('◎', '#0F8F6B', '#DDF5EC', 'Hoàn thành chỉ tiêu', pctT == null ? '—' : pct(pctT, 1), pctT == null ? 'Chưa có chỉ tiêu' : big(G.tgTot) + ' / ' + big(G.tg), pctT == null ? '' : '<div style="position:absolute;left:16px;right:16px;bottom:10px;height:5px;border-radius:3px;background:var(--border);"><div style="height:5px;border-radius:3px;width:' + Math.min(100, Math.round(pctT * 100)) + '%;background:#10B981;"></div></div>');
-    var ld = G.lead && G.lead.tot > 0 ? G.lead : null, per = K.span === 'quy' ? 'quý' : 'tháng';
+    var ld = G.lead && G.lead.tot > 0 ? G.lead : null, per = K.span === 'quy' ? 'quý' : K.span === 'nam' ? 'năm' : 'tháng';
     var c3 = card('★', '#B45309', '#FEF0D0', (G.byPh ? 'Phòng dẫn đầu ' : 'Dẫn đầu ') + per, ld ? esc2(ld.label) : '—', ld ? big(ld.tot) : '');
     var c4 = G.nTg ? card('▦', '#BE185D', '#FDE4EE', G.byPh ? 'Phòng đạt chỉ tiêu' : 'Người đạt chỉ tiêu', G.nDat + ' <span style="font-size:15px;color:var(--text-muted);font-weight:600;">/ ' + G.nTg + '</span>', pct(G.nDat / G.nTg, 0) + ' tổng số', '<div style="position:absolute;left:16px;right:16px;bottom:10px;height:5px;border-radius:3px;background:#F3B6C8;"><div style="height:5px;border-radius:3px;width:' + Math.round(G.nDat / G.nTg * 100) + '%;background:#10B981;"></div></div>') : card('▦', '#BE185D', '#FDE4EE', 'Đạt chỉ tiêu', '—', 'Chưa có chỉ tiêu');
     if(K.data && (K.data.vai === 'NV' || K.data.vai === 'CTV')){
       var R = DS.rk, ok = R && R.ok && R.hang_phong;
       var rk = function(h, n){ return h + ' <span style="font-size:15px;color:var(--text-muted);font-weight:600;">/ ' + n + '</span>'; };
-      c3 = card('★', '#B45309', '#FEF0D0', 'Hạng trong phòng', ok ? rk(R.hang_phong, R.so_phong) : (R ? '—' : '…'), ok ? 'Tính theo KPI cả ' + (K.span === 'quy' ? 'quý' : 'tháng') : '');
-      c4 = card('▦', '#BE185D', '#FDE4EE', 'Hạng trong team', ok ? rk(R.hang_team, R.so_team) : (R ? '—' : '…'), ok ? 'Tính theo KPI cả ' + (K.span === 'quy' ? 'quý' : 'tháng') : '');
+      c3 = card('★', '#B45309', '#FEF0D0', 'Hạng trong phòng', ok ? rk(R.hang_phong, R.so_phong) : (R ? '—' : '…'), ok ? 'Tính theo KPI cả ' + (K.span === 'quy' ? 'quý' : K.span === 'nam' ? 'năm' : 'tháng') : '');
+      c4 = card('▦', '#BE185D', '#FDE4EE', 'Hạng trong team', ok ? rk(R.hang_team, R.so_team) : (R ? '—' : '…'), ok ? 'Tính theo KPI cả ' + (K.span === 'quy' ? 'quý' : K.span === 'nam' ? 'năm' : 'tháng') : '');
     }
     var up = G.chg != null && G.chg >= 0;
     var c5 = card(up || G.chg == null ? '▲' : '▼', up || G.chg == null ? '#0F8F6B' : '#DC2626', up || G.chg == null ? '#DDF5EC' : '#FDE2E2', 'So với ngày trước', G.chg == null ? '—' : sgn(G.chg), G.L > 0 ? dm(G.days[L]) + ' so với ' + dm(G.days[L - 1]) : 'Chưa đủ dữ liệu', '', spark(G.tot.slice(-12), up ? '#0F8F6B' : '#DC2626'));
@@ -4806,7 +4811,7 @@ showView('view-lookup-login');
   LIVE.dashX = {
     html: function(k, info){
       sync(k); info = info || {};
-      var ctl = '<div class="dxbar"><div style="flex:1;min-width:200px;"><div style="font-size:12.5px;color:var(--text-muted);">' + esc2(info.scope || '') + '</div></div><select class="select" id="dxKy" style="min-width:230px;font-weight:600;">' + k.kyOptions().map(function(o){ return '<option value="' + o.k + '"' + (o.k === k.ky ? ' selected' : '') + '>' + o.label + '</option>'; }).join('') + '</select><div class="dxseg">' + seg('Tháng', k.span !== 'quy', 'dx-span', 'data-s="ky"') + seg('Quý', k.span === 'quy', 'dx-span', 'data-s="quy"') + '</div></div>';
+      var ctl = '<div class="dxbar"><div style="flex:1;min-width:200px;"><div style="font-size:12.5px;color:var(--text-muted);">' + esc2(info.scope || '') + '</div></div><select class="select" id="dxKy" style="min-width:230px;font-weight:600;">' + k.kyOptions().map(function(o){ return '<option value="' + o.k + '"' + (o.k === k.ky ? ' selected' : '') + '>' + o.label + '</option>'; }).join('') + '</select><div class="dxseg">' + seg('Tháng', k.span !== 'quy' && k.span !== 'nam', 'dx-span', 'data-s="ky"') + seg('Quý', k.span === 'quy', 'dx-span', 'data-s="quy"') + seg('Năm', k.span === 'nam', 'dx-span', 'data-s="nam"') + '</div></div>';
       if(!k.data || !k.days.length) return ctl + '<div class="dxp"><div style="padding:26px;text-align:center;color:var(--text-muted);">' + (k.loading ? 'Đang tải số liệu...' : 'Tháng này chưa có số liệu doanh số.') + '</div></div>';
       G = build();
       if(k.data && (k.data.vai === 'NV' || k.data.vai === 'CTV')){
@@ -4840,7 +4845,7 @@ showView('view-lookup-login');
         if(b.classList.contains('dx-gran')){ DS.gran = b.getAttribute('data-g'); DS.idx = -1; redraw(); return true; }
         if(b.classList.contains('dx-cum')){ DS.cum = b.getAttribute('data-c') === '1'; DS.idx = -1; redraw(); return true; }
         if(b.classList.contains('dx-dcum')){ DS.dcum = b.getAttribute('data-c') === '1'; redraw(); return true; }
-        if(b.classList.contains('dx-span')){ var sp = b.getAttribute('data-s'); if(sp !== K.span){ K.span = sp; K.from = ''; K.to = ''; K.load(); } return true; }
+        if(b.classList.contains('dx-span')){ var sp = b.getAttribute('data-s'); if(sp !== K.span){ if(sp === 'nam') DS.gran = 'thang'; else if(K.span === 'nam' && DS.gran === 'thang') DS.gran = 'ngay'; K.span = sp; K.from = ''; K.to = ''; K.load(); } return true; }
       }
       return false;
     }
@@ -5029,7 +5034,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.50';
+  var V = 'v3.52';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -5069,7 +5074,7 @@ showView('view-lookup-login');
 (function(){
   var box = document.getElementById('sloanContent'); if(!box) return;
   var imp0 = document.getElementById('importContent'), ibox = null;
-  if(imp0){ ibox = document.createElement('div'); ibox.className = 'content'; ibox.id = 'importLoan'; ibox.setAttribute('data-page-content', 'import'); ibox.style.display = 'none'; ibox.style.paddingTop = '0'; imp0.parentNode.insertBefore(ibox, imp0.nextSibling); }
+  if(imp0){ ibox = document.createElement('div'); ibox.className = 'content'; ibox.id = 'importLoan'; ibox.setAttribute('data-page-content', 'import'); ibox.style.display = 'none'; ibox.style.paddingBottom = '0'; imp0.parentNode.insertBefore(ibox, imp0); }
   var L = {rows:[], dot:[], loaded:false, loading:false, err:'', setup:true, tab:'sap', q:'', ph:'', grp:'', imp:null, msg:'', busy:false, qFocus:false};
   function isoToday(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function dayDiff(a, b){ var p = function(s){ var m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); return Date.UTC(+m[1], +m[2] - 1, +m[3]); }; return Math.round((p(a) - p(b)) / 864e5); }
