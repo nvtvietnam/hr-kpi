@@ -3561,6 +3561,7 @@ showView('view-lookup-login');
       K.ctErr = '';
       try { var r = await SBC.rpc('hr_chi_tieu_thang_get'); if(r.error){ if(r.error.code === 'PGRST202' || /Could not find|does not exist/i.test(r.error.message || '')) K.ctErr = 'Chưa bật chỉ tiêu theo tháng. Mở Supabase → <b>SQL Editor</b> → dán file <b>kpi_phan_quyen.sql</b> (bản mới) → <b>Run</b>, rồi tải lại trang.'; else throw r.error; } else K.cts = r.data || {}; } catch(e){ K.ctErr = esc(dbErr(e)); }
       try { var r2 = await SBC.rpc('hr_chi_tieu_rieng_get'); if(r2.error){ K.rieng = K.rieng || {}; K.riengErr = (r2.error.code === 'PGRST202' || /Could not find|does not exist/i.test(r2.error.message || '')) ? 'Chưa bật chỉ tiêu riêng. Mở Supabase → SQL Editor → dán file kpi_phan_quyen.sql (bản mới) → Run, rồi tải lại trang.' : esc(dbErr(r2.error)); } else { K.rieng = r2.data || {}; K.riengErr = ''; } } catch(e){ K.rieng = K.rieng || {}; K.riengErr = esc(dbErr(e)); }
+      try { var r3 = await SBC.rpc('hr_chi_tieu_phong_get'); if(r3.error){ K.riengP = K.riengP || {}; K.riengPErr = (r3.error.code === 'PGRST202' || /Could not find|does not exist/i.test(r3.error.message || '')) ? 'Chưa bật chỉ tiêu riêng phòng. Mở Supabase → SQL Editor → dán file chi_tieu_phong.sql → Run, rồi tải lại trang.' : esc(dbErr(r3.error)); } else { K.riengP = r3.data || {}; K.riengPErr = ''; } } catch(e){ K.riengP = K.riengP || {}; K.riengPErr = esc(dbErr(e)); }
       draw();
     }
     K.ky = kyNow();
@@ -3634,6 +3635,10 @@ showView('view-lookup-login');
         var sum = months.reduce(function(a, k){ var e = o && o[k]; if(e && e.v != null && Number(e.v) > 0){ any = true; return a + Number(e.v); } return a + (head ? 0 : ctFor(k, n.cap)); }, 0);
         return {tg:sum, rg:any};
       }
+      function tgPhong(name, hd){
+        var o = S.data && S.data.ct_phong && S.data.ct_phong[name], months = S.span === 'quy' ? quyMonths(S.ky) : S.span === 'nam' ? namMonths(S.ky) : [S.ky];
+        return months.reduce(function(a, k){ var e = o && o[k]; if(e && e.v != null && Number(e.v) > 0) return a + Number(e.v); return a + (hd ? ctFor(k, hd.cap) : 0); }, 0);
+      }
       function tgOf(cap){ return (S.span === 'quy' || S.span === 'nam') ? (S.span === 'quy' ? quyMonths(S.ky) : namMonths(S.ky)).reduce(function(a, k){ return a + ctFor(k, cap); }, 0) : ctFor(S.ky, cap); }
       function repName(){ var y = S.ky.slice(0,4), m = +S.ky.slice(5); return 'Báo cáo doanh số ' + (S.span === 'quy' ? 'Q' + Math.ceil(m / 3) + '.' + y : S.span === 'nam' ? 'Năm ' + y : 'T' + m + '.' + y); }
       function short(p){ return String(p || '').replace(/^PHÒNG TVĐT /, ''); }
@@ -3684,7 +3689,7 @@ showView('view-lookup-login');
         var phongs = (D.phong || []).map(function(p){
           var heads = D.nguoi.filter(function(n){ return n.phong === p.ten && isHead(n.cap); });
           var hd = heads.filter(function(n){ return p.truong_phong && n.ho_ten === p.truong_phong; })[0] || heads[0];
-          var v = pt[p.ten] || ZERO(), tot = v.cs + v.ps + v.gc + v.mf, tg = hd ? tgOf(hd.cap) : 0;
+          var v = pt[p.ten] || ZERO(), tot = v.cs + v.ps + v.gc + v.mf, tg = tgPhong(p.ten, hd);
           return {p:p, v:v, tot:tot, tg:tg, pct:tg > 0 ? tot / tg : null, dat:tg > 0 && tot >= tg, tp:p.truong_phong || (hd ? hd.ho_ten : ''), cap:hd ? hd.cap : '', so:cnt[p.ten] || 0};
         });
         return {agg:agg, persons:persons, phongs:phongs};
@@ -4122,6 +4127,34 @@ showView('view-lookup-login');
         rows.map(function(r){ var e = byCode[r.ma] || {}; return '<tr><td style="white-space:nowrap;">T' + r.k.slice(5) + '/' + r.k.slice(0, 4) + '</td><td><b>' + esc(e.name || r.ma) + '</b></td><td>' + esc(r.ma) + '</td><td>' + esc(e.level || '') + '</td><td class="num" style="font-weight:700;color:var(--accent-dark);">' + ctFmt(r.e.v) + '</td><td class="num sub">' + (e.level && CFG.levels[e.level] ? ctFmt(ctAt(r.k, e.level)) : '—') + '</td><td>' + esc(r.e.note || '') + '</td><td><button class="btn btn-secondary rg-del" data-m="' + esc(r.ma) + '" data-k="' + r.k + '" style="height:28px;padding:0 10px;">Xóa</button></td></tr>'; }).join('') + '</tbody></table></div>';
       return h + '</div></div>';
     }
+    function riengPhongHtml(){
+      var h = '<div class="panel" style="margin-bottom:16px;"><div class="panel-head" style="padding:14px 20px 6px;"><div class="panel-title">Chỉ tiêu riêng cho từng phòng</div></div><div style="padding:6px 20px 16px;">';
+      if(K.riengPErr) return h + '<div class="callout"><div>⚠️</div><div>' + K.riengPErr + '</div></div></div></div>';
+      if(!K.riengP) return h + '<div style="color:var(--text-muted);padding:8px 0;">Đang tải...</div></div></div>';
+      if(KV.data && KV.data.phong && KV.data.phong.length) K.phNames = KV.data.phong.map(function(p){ return p.ten; });
+      var phs = (K.phNames || []).slice(), kys = ctKys();
+      Object.keys(K.riengP).forEach(function(n){ if(phs.indexOf(n) < 0) phs.push(n); });
+      h += '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.7;">Dùng khi một phòng có chỉ tiêu khác chỉ tiêu của cấp trưởng phòng. Số này thay chỉ tiêu phòng ở các bảng KPI từng phòng và Phân tích. Tháng không đặt thì dùng chỉ tiêu theo cấp; xem theo quý thì chỉ tiêu quý = tổng 3 tháng.</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">' +
+        '<label style="font-size:12px;color:var(--text-muted);">Phòng<br><select class="select" id="rpQ" style="width:230px;">' + phs.map(function(n){ return '<option value="' + esc(n) + '">' + esc(n.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select></label>' +
+        '<label style="font-size:12px;color:var(--text-muted);">Tháng<br><select class="select" id="rpKy" style="width:190px;">' + kys.map(function(k){ return '<option value="' + k + '"' + (k === (K.rgKy || K.ky) ? ' selected' : '') + '>T' + k.slice(5) + '/' + k.slice(0, 4) + ' (' + kyLabel(k) + ')</option>'; }).join('') + '</select></label>' +
+        '<label style="font-size:12px;color:var(--text-muted);">Áp dụng cho<br><select class="select" id="rpScope" style="width:210px;"><option value="one">Chỉ tháng đã chọn</option><option value="cuoi">Từ tháng này đến hết quý</option><option value="quy">Cả quý (3 tháng)</option></select></label>' +
+        '<label style="font-size:12px;color:var(--text-muted);">Chỉ tiêu riêng (đồng)<br><input class="input" id="rpV" placeholder="VD: 900.000.000" inputmode="numeric" style="width:160px;"></label>' +
+        '<label style="font-size:12px;color:var(--text-muted);">Ghi chú<br><input class="input" id="rpN" placeholder="VD: bù KPI Quý 3" style="width:200px;"></label>' +
+        '<button class="btn btn-primary" id="rpAdd">Thêm / cập nhật</button></div>';
+      var rows = []; Object.keys(K.riengP).forEach(function(n){ Object.keys(K.riengP[n] || {}).forEach(function(k){ rows.push({n:n, k:k, e:K.riengP[n][k]}); }); });
+      rows.sort(function(a, b){ return b.k.localeCompare(a.k) || a.n.localeCompare(b.n); });
+      h += '<div style="margin-top:14px;font-weight:600;font-size:13px;">Phòng đang đặt riêng (' + rows.length + ')</div>';
+      if(!rows.length) h += '<div style="color:var(--text-muted);font-size:13px;padding:6px 0;">Chưa có phòng nào.</div>';
+      else h += '<div style="overflow-x:auto;"><table class="kvt" style="margin-top:6px;"><thead><tr><th>Tháng</th><th>Phòng</th><th class="num">Chỉ tiêu riêng</th><th>Ghi chú</th><th></th></tr></thead><tbody>' +
+        rows.map(function(r){ return '<tr><td style="white-space:nowrap;">T' + r.k.slice(5) + '/' + r.k.slice(0, 4) + '</td><td><b>' + esc(r.n.replace(/^PHÒNG TVĐT /, '')) + '</b></td><td class="num" style="font-weight:700;color:var(--accent-dark);">' + ctFmt(r.e.v) + '</td><td>' + esc(r.e.note || '') + '</td><td><button class="btn btn-secondary rp-del" data-n="' + esc(r.n) + '" data-k="' + r.k + '" style="height:28px;padding:0 10px;">Xóa</button></td></tr>'; }).join('') + '</tbody></table></div>';
+      return h + '</div></div>';
+    }
+    async function riengPSave(map, okMsg){
+      var r = await SBC.rpc('hr_chi_tieu_phong_set', {p_val:map});
+      if(r.error){ K.err = r.error.code === 'PGRST202' ? 'Chưa chạy file chi_tieu_phong.sql' : dbErr(r.error); } else { K.err = ''; K.riengP = map; K.msg = okMsg; KV.data = null; }
+      draw();
+    }
     async function riengSave(map, okMsg){
       var r = await SBC.rpc('hr_chi_tieu_rieng_set', {p_val:map});
       if(r.error){ K.err = r.error.code === 'PGRST202' ? 'Chưa chạy file kpi_phan_quyen.sql (bản mới)' : dbErr(r.error); } else { K.err = ''; K.rieng = map; K.msg = okMsg; KV.data = null; }
@@ -4148,13 +4181,13 @@ showView('view-lookup-login');
             '</tbody></table></div><div style="margin-top:12px;"><button class="btn btn-primary" id="dkCtSave">Lưu chỉ tiêu</button></div>';
         }
         h += '</div></div>';
-        h += riengHtml();
+        h += riengHtml() + riengPhongHtml();
         box.innerHTML = h; return;
       }
       box.innerHTML = h + KV.html(); KV.after();
     }
     box.addEventListener('input', function(ev){
-      var i = ev.target; if(i.id === 'rgV'){ var d0 = i.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); i.value = d0 ? viNum(parseInt(d0, 10), 0) : ''; return; }
+      var i = ev.target; if(i.id === 'rgV' || i.id === 'rpV'){ var d0 = i.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); i.value = d0 ? viNum(parseInt(d0, 10), 0) : ''; return; }
       if(i.classList && i.classList.contains('dk-ctm')){ var d = i.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); i.value = d ? viNum(parseInt(d, 10), 0) : ''; return; }
       KV.input(ev); });
     function $g(id){ return document.getElementById(id); }
@@ -4176,6 +4209,19 @@ showView('view-lookup-login');
         var m0 = JSON.parse(JSON.stringify(K.rieng || {})), ma0 = rd.getAttribute('data-m'), k0 = rd.getAttribute('data-k');
         if(m0[ma0]){ delete m0[ma0][k0]; if(!Object.keys(m0[ma0]).length) delete m0[ma0]; }
         await riengSave(m0, 'Đã xóa chỉ tiêu riêng.'); return;
+      }
+      var rpd = ev.target.closest('.rp-del'); if(rpd){
+        var m1 = JSON.parse(JSON.stringify(K.riengP || {})), n1 = rpd.getAttribute('data-n'), k1 = rpd.getAttribute('data-k');
+        if(m1[n1]){ delete m1[n1][k1]; if(!Object.keys(m1[n1]).length) delete m1[n1]; }
+        await riengPSave(m1, 'Đã xóa chỉ tiêu riêng của phòng.'); return;
+      }
+      if(ev.target.closest('#rpAdd')){
+        var pn = ($g('rpQ') || {}).value, ky2 = $g('rpKy').value, vs2 = $g('rpV').value.replace(/\D/g, ''), v2 = vs2 ? parseInt(vs2, 10) : 0;
+        if(!pn){ K.err = 'Chưa chọn phòng.'; draw(); return; }
+        if(!(v2 >= 1000000)){ K.err = 'Chỉ tiêu riêng phải từ 1.000.000 đồng trở lên (nhập đủ như 900.000.000).'; draw(); return; }
+        var mp2 = JSON.parse(JSON.stringify(K.riengP || {})), sc2 = ($g('rpScope') || {}).value || 'one', qm2 = quyMonths(ky2), ms2 = sc2 === 'quy' ? qm2 : sc2 === 'cuoi' ? qm2.filter(function(m){ return m >= ky2; }) : [ky2], note2 = ($g('rpN').value || '').trim();
+        ms2.forEach(function(m){ (mp2[pn] || (mp2[pn] = {}))[m] = {v:v2, note:note2}; });
+        K.rgKy = ky2; await riengPSave(mp2, 'Đã lưu chỉ tiêu riêng cho ' + pn.replace(/^PHÒNG TVĐT /, '') + ' ' + ms2.map(function(m){ return 'T' + m.slice(5); }).join(', ') + '/' + ky2.slice(0, 4) + ': ' + ctFmt(v2) + ' đồng.'); return;
       }
       if(ev.target.closest('#rgAdd')){
         var e = findEmp($g('rgQ').value), ky = $g('rgKy').value, vs = $g('rgV').value.replace(/\D/g, ''), v = vs ? parseInt(vs, 10) : 0;
@@ -5163,7 +5209,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.68';
+  var V = 'v3.69';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
