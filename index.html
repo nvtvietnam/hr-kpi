@@ -759,6 +759,10 @@ table.me-tbl tbody tr.me-row:hover{background:#F6F2FD;}
 .me-ov{position:fixed;inset:0;background:rgba(30,20,60,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
 .me-md{background:#fff;border-radius:14px;padding:20px 22px;width:100%;max-width:560px;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);}
 @media(max-width:600px){.me-md div[style*="grid-template-columns"]{grid-template-columns:1fr !important;}}
+/* Phòng ban: cố định hàng tiêu đề */
+.dp-wrap{overflow:auto;max-height:calc(100vh - 300px);}
+table.dp-tbl{width:100%;border-collapse:separate;border-spacing:0;}
+table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-shadow:0 1px 0 var(--border);}
 
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
@@ -1756,7 +1760,7 @@ showView('view-lookup-login');
     }).join('');
     document.getElementById('empFootText').textContent = (LIVE.on ? 'Hiển thị ' + Math.min(200, rows.length) + ' / ' + rows.length + ' kết quả (tổng ' + LV().length + ' nhân sự). Dùng ô tìm kiếm để lọc.' : 'Hiển thị ' + rows.length + ' / ' + EMP.length + ' nhân sự trong mockup');
     document.getElementById('empFootRight').textContent = LIVE.on ? 'Dữ liệu thật từ máy chủ' : 'Dữ liệu minh họa'; document.getElementById('empMockNote').style.display = LIVE.on ? 'none' : '';
-    var tot = LV().length, nPh = LIVE.on ? LIVE.phong.length : DEPTS.length, filt = !!(q || d || roleSet.length || s);
+    var tot = LV().length, nPh = LIVE.on ? (LIVE.phActive ? LIVE.phActive().length : LIVE.phong.length) : DEPTS.length, filt = !!(q || d || roleSet.length || s);
     var seenD = {}; rows.forEach(function(e){ seenD[e.dept] = 1; });
     var fm = function(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); };
     document.getElementById('empCountText').innerHTML = 'Toàn team · <b>' + fm(tot) + '</b> nhân sự · <b>' + fm(nPh) + '</b> phòng' +
@@ -2372,14 +2376,29 @@ showView('view-lookup-login');
     });
   }
   syncDeptOptions();
-  var CLOSING = -1, CMODE = 'dong';
+  var CLOSING = -1, CMODE = 'dong', DSORT = {k:'', d:1};
   function dmyS(x){ var m = String(x || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
   function todayIso(){ var n = new Date(); return n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2); }
+  function dinfo(d){
+    var m = d.mgr ? empOfV(d.mgr.trim().toUpperCase()) : null, hn = String(d.head || '').trim().toLowerCase(), pe = (LIVE.emp || EMP || []).filter(function(e){ return e.dept === d.name && e.status !== 'Offboarding'; });
+    var he = pe.filter(function(e){ return hn && String(e.name).trim().toLowerCase() === hn; })[0] || pe.filter(function(e){ return /^(TP|GĐ)/.test(e.level || ''); })[0];
+    return {mn:m ? m.name : '', hid:he ? (he.msn || he.code || '') : ''};
+  }
+  function dval(d, k){ if(k === 'name') return d.name; if(k === 'head') return d.head; if(k === 'mgr') return d.mgr; if(k === 'st') return d.closed ? 1 : 0; var x = dinfo(d); return k === 'hid' ? x.hid : x.mn; }
+  function dorder(){
+    var idx = PHONG.map(function(d, i){ return i; });
+    if(DSORT.k){ idx.sort(function(a, b){ var x = dval(PHONG[a], DSORT.k), y = dval(PHONG[b], DSORT.k); if(typeof x === 'number') return DSORT.d * (x - y) || a - b; x = String(x || ''); y = String(y || ''); if(!x && y) return 1; if(x && !y) return -1; return DSORT.d * x.localeCompare(y, 'vi', {numeric:true}) || a - b; }); }
+    else idx.sort(function(a, b){ return (PHONG[a].closed ? 1 : 0) - (PHONG[b].closed ? 1 : 0) || a - b; });
+    return idx;
+  }
+  function darrow(k){ return DSORT.k === k ? (DSORT.d > 0 ? ' ▲' : ' ▼') : ' <span style="opacity:.35;">⇅</span>'; }
+  function dth(k, lb){ return '<th class="dp-sort" data-k="' + k + '" style="cursor:pointer;white-space:nowrap;">' + lb + darrow(k) + '</th>'; }
   function renderDepts(){
     var box = document.getElementById('deptsContent'); if(!box) return;
-    var h = '<div class="page-head"><div><h1>Phòng ban</h1><p>'+PHONG.length+' phòng · tự thêm khi có phòng mới · nhập ID quản lý trực tiếp, hệ thống tự điền tên</p></div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" id="deptExport">Xuất Excel</button><button class="btn btn-primary" id="deptAdd">＋ Thêm phòng</button></div></div>';
-    h += '<div class="panel"><div class="panel-body"><table><thead><tr><th style="width:56px;">STT</th><th>Phòng</th><th>Tên trưởng phòng</th><th>ID trưởng phòng</th><th>ID quản lý trực tiếp</th><th>Tên quản lý trực tiếp</th><th style="min-width:200px;">Trạng thái</th></tr></thead><tbody>'+
-      PHONG.map(function(d,i){
+    var nAct = PHONG.filter(function(p){ return !p.closed; }).length, nCl = PHONG.length - nAct;
+    var h = '<div class="page-head"><div><h1>Phòng ban</h1><p>'+nAct+' phòng đang hoạt động'+(nCl ? ' · '+nCl+' đã đóng' : '')+' · tự thêm khi có phòng mới · nhập ID quản lý trực tiếp, hệ thống tự điền tên</p></div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" id="deptExport">Xuất Excel</button><button class="btn btn-primary" id="deptAdd">＋ Thêm phòng</button></div></div>';
+    h += '<div class="panel"><div class="panel-body"><div class="dp-wrap"><table class="dp-tbl"><thead><tr><th style="width:56px;">STT</th>'+dth('name','Phòng')+dth('head','Tên trưởng phòng')+dth('hid','ID trưởng phòng')+dth('mgr','ID quản lý trực tiếp')+dth('mn','Tên quản lý trực tiếp')+'<th class="dp-sort" data-k="st" style="min-width:200px;cursor:pointer;">Trạng thái'+darrow('st')+'</th></tr></thead><tbody>'+
+      dorder().map(function(i, pos){ var d = PHONG[i];
         var m = d.mgr ? empOfV(d.mgr.trim().toUpperCase()) : null;
         var mn = !d.mgr ? '<span style="color:var(--text-muted);">— (Leader / cấp cao nhất)</span>' : (m ? '<b>'+esc(m.name)+'</b>' : '<span style="color:var(--red);">Không tìm thấy ID</span>');
         var hn = String(d.head || '').trim().toLowerCase(), pe = (LIVE.emp || EMP || []).filter(function(e){ return e.dept === d.name && e.status !== 'Offboarding'; });
@@ -2391,14 +2410,14 @@ showView('view-lookup-login');
           : d.closed ? '<span class="badge badge-gray">Đã đóng' + (d.closeDate ? ' ' + dmyS(d.closeDate) : '') + '</span> <button class="btn btn-secondary dp-open" style="height:30px;padding:0 10px;">Mở lại</button>'
           : '<span class="badge badge-green">Đang hoạt động</span> <button class="btn btn-secondary dp-close" style="height:30px;padding:0 10px;">Đóng phòng</button>';
         st += hh;
-        return '<tr data-i="'+i+'"'+(d.closed ? ' style="opacity:.6;"' : '')+'><td class="num">'+(i+1)+'</td>'+
+        return '<tr data-i="'+i+'"'+(d.closed ? ' style="opacity:.6;"' : '')+'><td class="num">'+(pos+1)+'</td>'+
           '<td><input class="tbl-in dp-f" data-f="name" value="'+esc(d.name)+'" style="width:100%;min-width:140px;text-align:left;font-family:inherit;"></td>'+
           '<td><input class="tbl-in dp-f" data-f="head" value="'+esc(d.head)+'" style="width:100%;min-width:140px;text-align:left;font-family:inherit;"></td>'+
           '<td style="white-space:nowrap;">'+hid+'</td>'+
           '<td><input class="tbl-in dp-f" data-f="mgr" value="'+esc(d.mgr)+'" placeholder="VD: NV0012" style="width:110px;text-align:left;"></td>'+
           '<td>'+mn+'</td>'+
           '<td style="white-space:nowrap;">'+st+'</td></tr>'; }).join('')+
-      '</tbody></table></div><div class="table-foot"><span>'+(LIVE.on ? 'Đã lưu chung trên máy chủ, mọi máy đều thấy.' : 'Chế độ thử: lưu trên trình duyệt này.')+'</span><span></span></div></div>';
+      '</tbody></table></div></div><div class="table-foot"><span>'+(LIVE.on ? 'Đã lưu chung trên máy chủ, mọi máy đều thấy.' : 'Chế độ thử: lưu trên trình duyệt này.')+'</span><span></span></div></div>';
     box.innerHTML = h;
   }
   (function(){
@@ -2410,6 +2429,7 @@ showView('view-lookup-login');
       savePhong(); syncDeptOptions(); renderDepts(); toast('Đã lưu phòng ban');
     });
     box.addEventListener('click', function(ev){
+      var so = ev.target.closest('.dp-sort'); if(so){ var kk = so.getAttribute('data-k'); DSORT = DSORT.k === kk ? {k:kk, d:-DSORT.d} : {k:kk, d:1}; renderDepts(); return; }
       if(LIVE.on && ev.target.closest('#deptAdd')){ LIVE.addPhong(); return; }
       if(ev.target.closest('#deptAdd')){ PHONG.push({name:'Phòng mới', head:'', mgr:''}); savePhong(); syncDeptOptions(); renderDepts(); return; }
       var cl = ev.target.closest('.dp-close'); if(cl){ CLOSING = +cl.closest('tr').getAttribute('data-i'); CMODE = 'dong'; renderDepts(); return; }
@@ -3719,6 +3739,8 @@ showView('view-lookup-login');
       };
       function resBadge(x){ return !fullNow() || x.pct == null ? '—' : x.dat ? '<span class="badge badge-green">Đạt</span>' : '<span class="badge badge-red">Chưa đạt</span>'; }
       function fullNow(){ return S.days.length && S.from <= S.days[0]; }
+      LIVE.phClosed = function(ten){ return !!((LIVE.phong || []).filter(function(p){ return p.ten === ten; })[0] || {}).da_dong; };
+      LIVE.phActive = function(){ return (LIVE.phong || []).filter(function(p){ return !p.da_dong; }); };
       function closedPh(ten){ return !!((LIVE.phong || []).filter(function(p){ return p.ten === ten; })[0] || {}).da_dong; }
       function thieu(x){ return x.tg > 0 ? Math.max(0, x.tg - x.tot) : null; }
       function kqCell(x){ if(x.pct == null || !(x.tg > 0)) return '<span style="color:var(--text-muted);">—</span>'; var t = viNum(x.pct * 100, 1) + '%'; if(!fullNow()) return '<b>' + t + '</b>'; return '<span class="badge ' + (x.dat ? 'badge-green' : 'badge-red') + '" style="white-space:nowrap;">' + (x.dat ? 'Đạt' : 'Chưa đạt') + ' · ' + t + '</span>'; }
@@ -4140,7 +4162,7 @@ showView('view-lookup-login');
       if(K.riengPErr) return h + '<div class="callout"><div>⚠️</div><div>' + K.riengPErr + '</div></div></div></div>';
       if(!K.riengP) return h + '<div style="color:var(--text-muted);padding:8px 0;">Đang tải...</div></div></div>';
       if(KV.data && KV.data.phong && KV.data.phong.length) K.phNames = KV.data.phong.map(function(p){ return p.ten; });
-      var phs = (K.phNames || []).slice(), kys = ctKys();
+      var phs = (K.phNames || []).filter(function(n){ return !LIVE.phClosed(n) || (K.riengP && K.riengP[n]); }), kys = ctKys();
       Object.keys(K.riengP).forEach(function(n){ if(phs.indexOf(n) < 0) phs.push(n); });
       h += '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.7;">Dùng khi một phòng có chỉ tiêu khác chỉ tiêu của cấp trưởng phòng. Số này thay chỉ tiêu phòng ở các bảng KPI từng phòng và Phân tích. Tháng không đặt thì dùng chỉ tiêu theo cấp; xem theo quý thì chỉ tiêu quý = tổng 3 tháng.</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">' +
@@ -4692,7 +4714,7 @@ showView('view-lookup-login');
         var a = LIVE.memArgs(), r = await SBC.rpc('hr_nv_sua', {p_ma:a.ma || null, p_pin:a.pin || null, p_nv:E.ma, p_val:val});
         if(r.error) throw r.error;
         if(!r.data || !r.data.ok){ var l = r.data && r.data.loi; E.err = l === 'trung_ma' ? 'Mã nhân sự này đã có người dùng.' : l === 'ngay_vao_sai' ? 'Ngày vào không hợp lệ.' : l === 'thieu_ho_ten' ? 'Họ tên không được để trống.' : l === 'ngoai_pham_vi' ? 'Người này không thuộc phạm vi của bạn.' : 'Không lưu được, hãy đăng nhập lại.'; E.busy = false; draw('semp'); return; }
-        ((M.scope && M.scope.nguoi) || []).forEach(function(n){ if(n.ma_nv === E.ma){ n.ho_ten = String(val.ho_ten).trim(); n.ma_nhan_su = String(val.ma_nhan_su || '').trim() || null; } });
+        ((M.scope && M.scope.nguoi) || []).forEach(function(n){ if(n.ma_nv === E.ma){ n.ho_ten = String(val.ho_ten).trim(); n.ma_nhan_su = String(val.ma_nhan_su || '').trim() || null; n.gioi_thieu = String(val.ma_nguoi_gioi_thieu || '').trim().toUpperCase() || null; n.ten_gt = null; } });
         M.ed = null; if(typeof toast === 'function') toast('Đã lưu thông tin nhân sự'); draw('semp');
       } catch(e){ E.err = (e && e.code === 'PGRST202') ? 'Chưa chạy file nhan_su_truong_phong.sql trên Supabase' : dbErr(e); E.busy = false; draw('semp'); }
     }
@@ -4726,7 +4748,7 @@ showView('view-lookup-login');
         if(X.setup === false || KVd.setup === false) return void (el.innerHTML = h + holderMsg('Chưa bật phân quyền theo cấp. Mở Supabase → <b>SQL Editor</b> → dán file <b>kpi_phan_quyen.sql</b> → <b>Run</b>.'));
         if(X.err) return void (el.innerHTML = h + holderMsg('⚠️ ' + esc(X.err)));
         var s = X.scope || {nguoi:[], phong:[]}, ng = s.nguoi || [], off = ng.filter(function(x){ return !isCtv(x.cap); }).length;
-        h += LIVE.dashX ? LIVE.dashX.html(KVd, {nPeople:ng.length, nPh:(s.phong || []).length, scope:scopeText(X)}) : '';
+        h += LIVE.dashX ? LIVE.dashX.html(KVd, {nPeople:ng.length, nPh:(s.phong || []).filter(function(p){ return !(LIVE.phClosed && LIVE.phClosed(p.ten)); }).length, scope:scopeText(X)}) : '';
         el.innerHTML = h;
       } else if(page === 'semp'){
         if(LIVE.nhomEnsure) LIVE.nhomEnsure(function(){ draw('semp'); });
@@ -4740,8 +4762,8 @@ showView('view-lookup-login');
         var sk = (M.sort && M.sort.k) || '', sd = (M.sort && M.sort.d) || 1;
         if(sk) rows = rows.slice().sort(function(a, b){ var x = String(a[sk] == null ? '' : a[sk]), y = String(b[sk] == null ? '' : b[sk]); if(!x && y) return 1; if(x && !y) return -1; return sd * x.localeCompare(y, 'vi', {numeric:true}); });
         var thS = function(k, lb){ return '<th class="me-sort" data-k="' + k + '" style="cursor:pointer;white-space:nowrap;">' + lb + (sk === k ? (sd > 0 ? ' ▲' : ' ▼') : ' <span style="opacity:.35;">⇅</span>') + '</th>'; };
-        hh += '<div class="panel"><div class="panel-head" style="padding:14px 18px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhân sự (' + rows.length + ')' + (canEd ? ' <span style="font-weight:400;font-size:12.5px;color:var(--text-muted);">· bấm vào một người để xem và sửa thông tin</span>' : '') + '</div>' + LIVE.grpSelect('meG', M.grp) + (Object.keys(phs).length > 1 ? '<select class="select" id="meP"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === M.ph ? ' selected' : '') + '>' + esc(p.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + (ng2.length > 8 ? '<input class="input" id="meQ" placeholder="Tìm tên hoặc ID" value="' + esc(M.q || '') + '">' : '') + '</div><div class="panel-body me-wrap"><table class="me-tbl"><thead><tr><th>#</th>' + thS('ho_ten', 'Tên') + thS('ma_nv', 'ID') + thS('ma_nhan_su', 'Mã nhân sự') + thS('phong', 'Phòng') + thS('cap', 'Cấp') + '</tr></thead><tbody>' +
-          (rows.length ? rows.slice(0, 400).map(function(x, i){ return '<tr' + (canEd ? ' class="me-row" data-m="' + esc(x.ma_nv) + '" style="cursor:pointer;' + (x.ma_nv === M.ma ? 'background:var(--accent-soft);' : '') + '"' : (x.ma_nv === M.ma ? ' style="background:var(--accent-soft);"' : '')) + '><td style="color:var(--text-muted);">' + (i + 1) + '</td><td style="white-space:nowrap;">' + esc(x.ho_ten) + (x.ma_nv === M.ma ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + '</td><td>' + esc(x.ma_nv) + '</td><td>' + esc(x.ma_nhan_su || '') + '</td><td style="white-space:nowrap;">' + esc((x.phong || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(x.cap) + '</td></tr>'; }).join('') : '<tr><td colspan="6" style="padding:16px;color:var(--text-muted);">Không có ai.</td></tr>') + '</tbody></table></div><div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);">' + scopeText() + (canEd ? ' Cấp, phòng và trạng thái do quản trị viên xử lý.' : ' Việc thêm người hoặc đổi phòng do quản trị viên xử lý.') + '</div></div>' + edModal();
+        hh += '<div class="panel"><div class="panel-head" style="padding:14px 18px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhân sự (' + rows.length + ')' + (canEd ? ' <span style="font-weight:400;font-size:12.5px;color:var(--text-muted);">· bấm vào một người để xem và sửa thông tin</span>' : '') + '</div>' + LIVE.grpSelect('meG', M.grp) + (Object.keys(phs).length > 1 ? '<select class="select" id="meP"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === M.ph ? ' selected' : '') + '>' + esc(p.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + (ng2.length > 8 ? '<input class="input" id="meQ" placeholder="Tìm tên hoặc ID" value="' + esc(M.q || '') + '">' : '') + '</div><div class="panel-body me-wrap"><table class="me-tbl"><thead><tr><th>#</th>' + thS('ho_ten', 'Tên') + thS('ma_nv', 'ID') + thS('ma_nhan_su', 'Mã nhân sự') + thS('phong', 'Phòng') + thS('cap', 'Cấp') + (canEd ? thS('gioi_thieu', 'Người giới thiệu') : '') + '</tr></thead><tbody>' +
+          (rows.length ? rows.slice(0, 400).map(function(x, i){ return '<tr' + (canEd ? ' class="me-row" data-m="' + esc(x.ma_nv) + '" style="cursor:pointer;' + (x.ma_nv === M.ma ? 'background:var(--accent-soft);' : '') + '"' : (x.ma_nv === M.ma ? ' style="background:var(--accent-soft);"' : '')) + '><td style="color:var(--text-muted);">' + (i + 1) + '</td><td style="white-space:nowrap;">' + esc(x.ho_ten) + (x.ma_nv === M.ma ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + '</td><td>' + esc(x.ma_nv) + '</td><td>' + esc(x.ma_nhan_su || '') + '</td><td style="white-space:nowrap;">' + esc((x.phong || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(x.cap) + '</td>' + (canEd ? '<td style="white-space:nowrap;">' + (x.gioi_thieu ? esc(x.gioi_thieu) + (x.ten_gt ? ' <span style="color:var(--text-muted);">· ' + esc(x.ten_gt) + '</span>' : '') : '<span style="color:var(--text-muted);">—</span>') + '</td>' : '') + '</tr>'; }).join('') : '<tr><td colspan="7" style="padding:16px;color:var(--text-muted);">Không có ai.</td></tr>') + '</tbody></table></div><div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);">' + scopeText() + (canEd ? ' Cấp, phòng và trạng thái do quản trị viên xử lý.' : ' Việc thêm người hoặc đổi phòng do quản trị viên xử lý.') + '</div></div>' + edModal();
         el.innerHTML = hh;
         var qi = document.getElementById('meQ'); if(qi && M.qf){ qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
       } else if(page === 'sloan' && LIVE.loanDraw){ LIVE.loanDraw();
@@ -4882,7 +4904,7 @@ showView('view-lookup-login');
     var D = K.data, days = K.days, n = days.length, f = days[0], l = days[n - 1], C = K.calc(f, l), byPh = K.canPhong(), units, unitOf = {}, at = {};
     days.forEach(function(d, i){ at[d] = i; });
     if(byPh){
-      units = C.phongs.map(function(x){ return {key:x.p.ten, label:(x.tp || short(x.p.ten)), sub:short(x.p.ten), tot:x.tot, tg:x.tg, pct:x.pct, dat:x.dat}; });
+      units = C.phongs.filter(function(x){ return !(LIVE.phClosed && LIVE.phClosed(x.p.ten) && !(x.tot > 0)); }).map(function(x){ return {key:x.p.ten, label:(x.tp || short(x.p.ten)), sub:short(x.p.ten), tot:x.tot, tg:x.tg, pct:x.pct, dat:x.dat}; });
       D.nguoi.forEach(function(p){ unitOf[p.ma_nv] = p.phong; });
     } else {
       units = C.persons.filter(function(x){ return x.tot > 0 || x.me; }).map(function(x){ return {key:x.n.ma_nv, label:x.n.ho_ten, sub:x.n.cap, tot:x.tot, tg:x.tg, pct:x.pct, dat:x.dat}; });
@@ -5232,7 +5254,7 @@ showView('view-lookup-login');
       h += '<div style="display:flex;gap:10px;align-items:center;margin-top:14px;"><button class="btn btn-primary" id="nhSave"' + (N.busy ? ' disabled' : '') + '>' + (N.busy ? 'Đang lưu...' : 'Lưu') + '</button><span style="font-size:12.5px;color:var(--text-muted);">Nếu đã xóa hết nhóm, bấm Lưu để cập nhật.</span></div>';
       box.innerHTML = h; return;
     }
-    var q = N.q.trim().toLowerCase(), phs = (LIVE.phong || []).slice().sort(function(a, b){ return String(a.ten).localeCompare(String(b.ten), 'vi', {numeric:true}); });
+    var q = N.q.trim().toLowerCase(), phs = (LIVE.phong || []).filter(function(p){ return !p.da_dong || (cg() && cg().ph.indexOf(p.ten) > -1); }).sort(function(a, b){ return String(a.ten).localeCompare(String(b.ten), 'vi', {numeric:true}); });
     h += '<div class="panel" style="margin-bottom:16px;"><div style="padding:14px 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><span style="font-weight:700;">Tên nhóm</span><input class="input" id="nhName" value="' + esc(g.ten) + '" style="max-width:280px;" placeholder="Ví dụ: Phòng trọng điểm"><span style="flex:1;"></span><button class="btn btn-secondary" id="nhDel" style="color:#B91C1C;">Xóa nhóm này</button></div></div>';
     h += '<div class="panel" style="margin-bottom:16px;"><div class="panel-header"><div class="panel-title">Phòng trong nhóm</div><span style="font-size:12px;color:var(--text-muted);" id="nhCount">Đã chọn ' + g.ph.length + ' / ' + phs.length + ' phòng</span></div><div style="padding:6px 20px 16px;">' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;"><input class="input" id="nhQ" placeholder="Tìm phòng" value="' + esc(N.q) + '" style="max-width:220px;"><button class="btn btn-secondary" id="nhAll">Chọn tất cả đang hiện</button><button class="btn btn-secondary" id="nhNone">Bỏ chọn hết</button></div>' +
@@ -5250,7 +5272,7 @@ showView('view-lookup-login');
     else if(t.id === 'nhName' && g){ g.ten = t.value; var tb = box.querySelector('.nh-tab[data-i="' + N.cur + '"]'); if(tb) tb.textContent = '⭐ ' + (t.value || ('Nhóm ' + (N.cur + 1))); }
     else if(t.id === 'nhQ'){ N.q = t.value; var q = N.q.trim().toLowerCase(); box.querySelectorAll('.nh-it').forEach(function(l){ l.style.display = !q || l.getAttribute('data-t').indexOf(q) > -1 ? 'flex' : 'none'; }); }
   });
-  function cnt(){ var c = document.getElementById('nhCount'), g = cg(); if(c && g) c.textContent = 'Đã chọn ' + g.ph.length + ' / ' + (LIVE.phong || []).length + ' phòng'; }
+  function cnt(){ var c = document.getElementById('nhCount'), g = cg(); if(c && g) c.textContent = 'Đã chọn ' + g.ph.length + ' / ' + (LIVE.phActive ? LIVE.phActive().length : (LIVE.phong || []).length) + ' phòng'; }
   box.addEventListener('change', function(ev){ var t = ev.target, g = cg(); if(g && t.classList && t.classList.contains('nh-ph')){ var i = g.ph.indexOf(t.value); if(t.checked && i < 0) g.ph.push(t.value); else if(!t.checked && i > -1) g.ph.splice(i, 1); cnt(); } });
   box.addEventListener('click', async function(ev){
     var tab = ev.target.closest('.nh-tab'); if(tab){ N.cur = +tab.getAttribute('data-i'); N.q = ''; N.msg = ''; N.err = ''; draw(); return; }
@@ -5279,7 +5301,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.71';
+  var V = 'v3.75';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -5676,9 +5698,9 @@ showView('view-lookup-login');
     var gs = groups(); if(!gs.length) return {none:true};
     var g = gs.filter(function(x){ return x.k === A.grp; })[0] || gs[0]; A.grp = g.k;
     var ids = (g.id || []).map(function(x){ return String(x).toUpperCase(); });
-    var C = E1.calc(), by = {}, tot = 0, spec = 0, seen = {};
+    var C = E1.calc(), by = {}, tot = 0, spec = 0, seen = {}, tps = {}; C.phongs.forEach(function(x){ tps[x.p.ten] = x.tp || ''; });
     C.persons.forEach(function(x){
-      var n = x.n, sp = inI(n, ids), p = by[n.phong] || (by[n.phong] = {ten:n.phong, spec:0, rest:0, nSpec:0, list:[]});
+      var n = x.n, sp = inI(n, ids), p = by[n.phong] || (by[n.phong] = {ten:n.phong, tp:tps[n.phong] || '', spec:0, rest:0, nSpec:0, list:[]});
       tot += x.tot;
       if(sp){ p.spec += x.tot; p.nSpec++; spec += x.tot; p.list.push({ma:n.ma_nv, ten:n.ho_ten, tot:x.tot}); ids.forEach(function(i){ if(i === String(n.ma_nv).toUpperCase() || (n.ma_nhan_su && i === String(n.ma_nhan_su).toUpperCase())) seen[i] = 1; }); }
       else p.rest += x.tot;
@@ -5709,21 +5731,21 @@ showView('view-lookup-login');
     var cards = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px;">' +
       [['Tổng doanh số công ty', money(D.tot), 'Cơ sở + Phái sinh + Giải chấp + Miễn phí'], ['Nhóm ' + esc(D.g.ten) + ' (' + D.ids.length + ' ID)', money(D.spec), 'Chiếm ' + pc(D.pct) + ' tổng công ty'], ['Phần còn lại', money(D.rest), 'Chiếm ' + pc(D.tot > 0 ? D.rest / D.tot : null)]].map(function(c){ return '<div class="panel" style="padding:14px 16px;"><div style="font-size:12.5px;color:var(--text-muted);">' + c[0] + '</div><div style="font-size:21px;font-weight:800;color:var(--accent-dark);margin:3px 0;">' + c[1] + '</div><div style="font-size:12px;color:var(--text-muted);">' + c[2] + '</div></div>'; }).join('') + '</div>';
     if(A.view.id === 'id'){
-      var fl = []; D.rows.forEach(function(p){ p.list.forEach(function(x){ fl.push({ph:short(p.ten), ma:x.ma, ten:x.ten, tot:x.tot, inPh:p.all > 0 ? x.tot / p.all : null, share:D.spec > 0 ? x.tot / D.spec : null}); }); });
+      var fl = []; D.rows.forEach(function(p){ p.list.forEach(function(x){ fl.push({ph:short(p.ten), tp:p.tp, ma:x.ma, ten:x.ten, tot:x.tot, inPh:p.all > 0 ? x.tot / p.all : null, share:D.spec > 0 ? x.tot / D.spec : null}); }); });
       fl = srt(fl, A.sort.idi, function(x, k){ return x[k]; });
-      var b1 = fl.map(function(x, i){ return '<tr><td>' + (i + 1) + '</td><td>' + esc(x.ma) + '</td><td>' + esc(x.ten) + '</td><td>' + esc(x.ph) + '</td><td class="num"><b>' + money(x.tot) + '</b></td><td class="num">' + pc(x.inPh) + '</td><td class="num">' + pc(x.share) + '</td></tr>'; }).join('');
-      return bar + cards + '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Từng ID trong nhóm ' + esc(D.g.ten) + ' (' + fl.length + ')</div><button class="btn btn-secondary" id="anXls">Tải Excel</button></div><div class="panel-body" style="overflow-x:auto;"><table class="kvt"><thead><tr><th>#</th>' + th('idi', 'ma', 'Mã') + th('idi', 'ten', 'Họ tên') + th('idi', 'ph', 'Phòng') + th('idi', 'tot', 'Doanh số') + th('idi', 'inPh', '% trong phòng') + th('idi', 'share', 'Tỷ trọng trong nhóm') + '</tr></thead><tbody>' + b1 + '</tbody></table></div></div>' + (D.miss.length ? '<div class="callout" style="margin-top:12px;"><div>ℹ️</div><div>' + D.miss.length + ' ID chưa có doanh số / chưa gắn nhân sự trong kỳ này: ' + esc(D.miss.join(', ')) + '</div></div>' : '');
+      var b1 = fl.map(function(x, i){ return '<tr><td>' + (i + 1) + '</td><td>' + esc(x.ma) + '</td><td>' + esc(x.ten) + '</td><td>' + esc(x.ph) + '</td><td class="sub">' + esc(x.tp) + '</td><td class="num"><b>' + money(x.tot) + '</b></td><td class="num">' + pc(x.inPh) + '</td><td class="num">' + pc(x.share) + '</td></tr>'; }).join('');
+      return bar + cards + '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Từng ID trong nhóm ' + esc(D.g.ten) + ' (' + fl.length + ')</div><button class="btn btn-secondary" id="anXls">Tải Excel</button></div><div class="panel-body" style="overflow-x:auto;"><table class="kvt"><thead><tr><th>#</th>' + th('idi', 'ma', 'Mã') + th('idi', 'ten', 'Họ tên') + th('idi', 'ph', 'Phòng') + th('idi', 'tp', 'Trưởng phòng') + th('idi', 'tot', 'Doanh số') + th('idi', 'inPh', '% trong phòng') + th('idi', 'share', 'Tỷ trọng trong nhóm') + '</tr></thead><tbody>' + b1 + '</tbody></table></div></div>' + (D.miss.length ? '<div class="callout" style="margin-top:12px;"><div>ℹ️</div><div>' + D.miss.length + ' ID chưa có doanh số / chưa gắn nhân sự trong kỳ này: ' + esc(D.miss.join(', ')) + '</div></div>' : '');
     }
     var get = function(p, k){ return k === 'ten' ? short(p.ten) : p[k]; };
     var rows = srt(D.rows, A.sort.id, get), T = {spec:0, rest:0, all:0, n:0};
     var body = rows.map(function(p, i){
       T.spec += p.spec; T.rest += p.rest; T.all += p.all; T.n += p.nSpec;
-      var op = A.open['i' + p.ten], r = '<tr class="an-row" data-k="i' + esc(p.ten) + '" style="cursor:pointer;"><td>' + (i + 1) + '</td><td><b>' + (p.nSpec ? (op ? '▾ ' : '▸ ') : '') + esc(short(p.ten)) + '</b></td><td class="num">' + p.nSpec + '</td><td class="num"><b>' + money(p.spec) + '</b></td><td class="num">' + money(p.rest) + '</td><td class="num">' + money(p.all) + '</td><td class="num">' + pc(p.pct) + '</td><td class="num">' + pc(p.share) + '</td></tr>';
-      if(op) p.list.slice().sort(function(a, b){ return b.tot - a.tot; }).forEach(function(x){ r += '<tr style="background:var(--surface-2,#faf8ff);"><td></td><td class="sub" style="padding-left:22px;">' + esc(x.ma) + ' · ' + esc(x.ten) + '</td><td></td><td class="num sub">' + money(x.tot) + '</td><td></td><td></td><td class="num sub">' + pc(p.all > 0 ? x.tot / p.all : null) + '</td><td class="num sub">' + pc(D.spec > 0 ? x.tot / D.spec : null) + '</td></tr>'; });
+      var op = A.open['i' + p.ten], r = '<tr class="an-row" data-k="i' + esc(p.ten) + '" style="cursor:pointer;"><td>' + (i + 1) + '</td><td><b>' + (p.nSpec ? (op ? '▾ ' : '▸ ') : '') + esc(short(p.ten)) + '</b></td><td class="sub">' + esc(p.tp) + '</td><td class="num">' + p.nSpec + '</td><td class="num"><b>' + money(p.spec) + '</b></td><td class="num">' + money(p.rest) + '</td><td class="num">' + money(p.all) + '</td><td class="num">' + pc(p.pct) + '</td><td class="num">' + pc(p.share) + '</td></tr>';
+      if(op) p.list.slice().sort(function(a, b){ return b.tot - a.tot; }).forEach(function(x){ r += '<tr style="background:var(--surface-2,#faf8ff);"><td></td><td class="sub" style="padding-left:22px;">' + esc(x.ma) + ' · ' + esc(x.ten) + '</td><td></td><td></td><td class="num sub">' + money(x.tot) + '</td><td></td><td></td><td class="num sub">' + pc(p.all > 0 ? x.tot / p.all : null) + '</td><td class="num sub">' + pc(D.spec > 0 ? x.tot / D.spec : null) + '</td></tr>'; });
       return r;
     }).join('');
-    var foot = '<tr style="font-weight:800;border-top:2px solid var(--border);"><td></td><td>Cộng</td><td class="num">' + T.n + '</td><td class="num">' + money(T.spec) + '</td><td class="num">' + money(T.rest) + '</td><td class="num">' + money(T.all) + '</td><td class="num">' + pc(T.all > 0 ? T.spec / T.all : null) + '</td><td class="num">' + pc(T.spec > 0 ? 1 : null) + '</td></tr>';
-    return bar + cards + '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhóm ' + esc(D.g.ten) + ' theo từng phòng (' + rows.length + ') <span title="% trong phòng = doanh số nhóm đặc biệt ÷ tổng doanh số phòng. Tỷ trọng = doanh số của phòng trong nhóm ÷ tổng doanh số cả nhóm. Bấm tên phòng để xem từng ID, bấm tên cột để sắp xếp." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div><button class="btn btn-secondary" id="anXls">Tải Excel</button></div><div class="panel-body" style="overflow-x:auto;"><table class="kvt"><thead><tr><th>#</th>' + th('id', 'ten', 'Phòng') + th('id', 'nSpec', 'Số ID đặc biệt') + th('id', 'spec', 'DS nhóm đặc biệt') + th('id', 'rest', 'DS còn lại') + th('id', 'all', 'Tổng DS phòng') + th('id', 'pct', '% đặc biệt / phòng') + th('id', 'share', 'Tỷ trọng trong nhóm') + '</tr></thead><tbody>' + body + foot + '</tbody></table></div></div>' +
+    var foot = '<tr style="font-weight:800;border-top:2px solid var(--border);"><td></td><td>Cộng</td><td></td><td class="num">' + T.n + '</td><td class="num">' + money(T.spec) + '</td><td class="num">' + money(T.rest) + '</td><td class="num">' + money(T.all) + '</td><td class="num">' + pc(T.all > 0 ? T.spec / T.all : null) + '</td><td class="num">' + pc(T.spec > 0 ? 1 : null) + '</td></tr>';
+    return bar + cards + '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhóm ' + esc(D.g.ten) + ' theo từng phòng (' + rows.length + ') <span title="% trong phòng = doanh số nhóm đặc biệt ÷ tổng doanh số phòng. Tỷ trọng = doanh số của phòng trong nhóm ÷ tổng doanh số cả nhóm. Bấm tên phòng để xem từng ID, bấm tên cột để sắp xếp." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div><button class="btn btn-secondary" id="anXls">Tải Excel</button></div><div class="panel-body" style="overflow-x:auto;"><table class="kvt"><thead><tr><th>#</th>' + th('id', 'ten', 'Phòng') + th('id', 'tp', 'Trưởng phòng') + th('id', 'nSpec', 'Số ID đặc biệt') + th('id', 'spec', 'DS nhóm đặc biệt') + th('id', 'rest', 'DS còn lại') + th('id', 'all', 'Tổng DS phòng') + th('id', 'pct', '% đặc biệt / phòng') + th('id', 'share', 'Tỷ trọng trong nhóm') + '</tr></thead><tbody>' + body + foot + '</tbody></table></div></div>' +
       (D.miss.length ? '<div class="callout" style="margin-top:12px;"><div>ℹ️</div><div>' + D.miss.length + ' ID trong nhóm chưa có doanh số / chưa gắn nhân sự trong kỳ này: ' + esc(D.miss.join(', ')) + '</div></div>' : '');
   }
 
@@ -5736,11 +5758,11 @@ showView('view-lookup-login');
       var f = fc(x.tot), ppl = (per[x.p.ten] || []).map(function(y){
         var g = fc(y.tot); return {ma:y.n.ma_nv, ten:y.n.ho_ten, cap:y.n.cap, tot:y.tot, tg:y.tg, rg:y.rg, fc:g, pct:y.tg > 0 && g != null ? g / y.tg : null, gap:y.tg > 0 && g != null ? g - y.tg : null, dat:y.tg > 0 && g != null && g >= y.tg};
       });
-      return {ten:x.p.ten, tp:x.tp, so:x.so, tot:x.tot, tg:x.tg, fc:f, cur:x.tg > 0 ? x.tot / x.tg : null, pct:x.tg > 0 && f != null ? f / x.tg : null, gap:x.tg > 0 && f != null ? f - x.tg : null, dat:x.tg > 0 && f != null && f >= x.tg, ppl:ppl};
+      return {ten:x.p.ten, tp:x.tp, so:x.so, tot:x.tot, tg:x.tg, fc:f, cur:x.tg > 0 ? x.tot / x.tg : null, pct:x.tg > 0 && f != null ? f / x.tg : null, gap:x.tg > 0 && f != null ? f - x.tg : null, dat:x.tg > 0 && f != null && f >= x.tg, ppl:ppl, nTg:ppl.filter(function(y){ return y.pct != null; }).length, nFail:ppl.filter(function(y){ return y.pct != null && !y.dat; }).length};
     }).filter(function(r){ return r.tot > 0 || r.so > 0; });
     var tot = 0, tg = 0; rows.forEach(function(r){ tot += r.tot; tg += r.tg; });
-    var f = fc(tot);
-    return {rg:rg, last:last, wd:wd, rows:rows, tot:tot, tg:tg, fc:f, pct:tg > 0 && f != null ? f / tg : null, gap:tg > 0 && f != null ? f - tg : null, dat:tg > 0 && f != null && f >= tg};
+    var f = fc(tot), nPh = rows.filter(function(r){ return r.pct != null; }).length, nPhFail = rows.filter(function(r){ return r.pct != null && !r.dat; }).length, nNs = 0, nNsFail = 0; rows.forEach(function(r){ nNs += r.nTg; nNsFail += r.nFail; });
+    return {nPh:nPh, nPhFail:nPhFail, nNs:nNs, nNsFail:nNsFail, rg:rg, last:last, wd:wd, rows:rows, tot:tot, tg:tg, fc:f, pct:tg > 0 && f != null ? f / tg : null, gap:tg > 0 && f != null ? f - tg : null, dat:tg > 0 && f != null && f >= tg};
   }
   function badge(x){ return x.pct == null ? '<span style="color:var(--text-muted);">—</span>' : '<span class="badge ' + (x.dat ? 'badge-green' : 'badge-red') + '" style="white-space:nowrap;">' + (x.dat ? 'Đạt' : 'Chưa đạt') + '</span>'; }
   function gapTxt(g){ return g == null ? '—' : (g >= 0 ? '+' : '−') + money(Math.abs(g)); }
@@ -5749,20 +5771,24 @@ showView('view-lookup-login');
     if(!E.days.length) return bar + '<div class="panel"><div style="padding:22px 20px;font-size:13.5px;color:var(--text-muted);">Quý này chưa có số liệu doanh số.</div></div>';
     var D = calcDu(), get = function(r, k){ return k === 'ten' ? short(r.ten) : r[k]; };
     var info = '<div class="callout" style="margin-bottom:14px;"><div>📅</div><div>Số liệu đến ngày <b>' + dmy(D.last) + '</b> (ngày có dữ liệu mới nhất). Đã qua <b>' + D.wd.done + '/' + D.wd.tot + '</b> ngày làm việc của quý (bỏ thứ 7, chủ nhật, ngày nghỉ đã cài). <b>Dự kiến cuối quý = Doanh số hiện tại ÷ ' + D.wd.done + ' × ' + D.wd.tot + '</b>, so với chỉ tiêu quý (tổng 3 tháng).</div></div>';
+    var sumC = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:14px;">' + [
+      ['Phòng dự kiến không đạt', D.nPhFail + ' <span style="font-size:15px;color:var(--text-muted);font-weight:600;">/ ' + D.nPh + ' phòng</span>', D.nPh ? (D.nPh - D.nPhFail) + ' phòng dự kiến đạt · ' + pc(D.nPhFail / D.nPh) + ' không đạt' : 'Chưa có chỉ tiêu', D.nPhFail ? '#DC2626' : '#0F8F6B'],
+      ['Nhân sự dự kiến không đạt', D.nNsFail + ' <span style="font-size:15px;color:var(--text-muted);font-weight:600;">/ ' + D.nNs + ' người</span>', D.nNs ? (D.nNs - D.nNsFail) + ' người dự kiến đạt · ' + pc(D.nNsFail / D.nNs) + ' không đạt' : 'Chưa có chỉ tiêu', D.nNsFail ? '#DC2626' : '#0F8F6B']
+    ].map(function(c){ return '<div class="panel" style="padding:14px 16px;"><div style="font-size:12.5px;color:var(--text-muted);">' + c[0] + '</div><div style="font-size:22px;font-weight:800;color:' + c[3] + ';margin:3px 0;">' + c[1] + '</div><div style="font-size:12px;color:var(--text-muted);">' + c[2] + '</div></div>'; }).join('') + '</div>';
     if(A.view.du === 'id'){
       var fl2 = []; D.rows.forEach(function(r){ r.ppl.forEach(function(x){ var y = Object.assign({ph:short(r.ten)}, x); fl2.push(y); }); });
       fl2 = srt(fl2, A.sort.dui, function(x, k){ return x[k]; });
       var b2 = fl2.map(function(x, i){ return '<tr><td>' + (i + 1) + '</td><td>' + esc(x.ma) + '</td><td>' + esc(x.ten) + '</td><td class="sub">' + esc(x.cap || '') + '</td><td>' + esc(x.ph) + '</td><td class="num">' + money(x.tot) + '</td><td class="num"><b>' + money(x.fc == null ? 0 : x.fc) + '</b></td><td class="num">' + (x.tg > 0 ? money(x.tg) + (x.rg ? '*' : '') : '—') + '</td><td class="num">' + pc(x.pct) + '</td><td class="num">' + gapTxt(x.gap) + '</td><td>' + badge(x) + '</td></tr>'; }).join('');
-      return bar + info + '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Dự kiến KPI ' + qLabel(E.ky) + ' từng nhân viên (' + fl2.length + ') <span title="Chỉ tiêu cá nhân, dấu * là chỉ tiêu riêng. Trưởng phòng / giám đốc không có chỉ tiêu cá nhân hiện —." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div><button class="btn btn-secondary" id="anXls">Tải Excel</button></div><div class="panel-body" style="overflow-x:auto;"><table class="kvt"><thead><tr><th>#</th>' + th('dui', 'ma', 'Mã') + th('dui', 'ten', 'Họ tên') + th('dui', 'cap', 'Cấp') + th('dui', 'ph', 'Phòng') + th('dui', 'tot', 'DS hiện tại') + th('dui', 'fc', 'Dự kiến cuối quý') + th('dui', 'tg', 'Chỉ tiêu quý') + th('dui', 'pct', '% dự kiến / chỉ tiêu') + th('dui', 'gap', 'Dư / thiếu') + '<th>Kết quả</th></tr></thead><tbody>' + b2 + '</tbody></table></div></div>';
+      return bar + info + sumC + '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Dự kiến KPI ' + qLabel(E.ky) + ' từng nhân viên (' + fl2.length + ') <span title="Chỉ tiêu cá nhân, dấu * là chỉ tiêu riêng. Trưởng phòng / giám đốc không có chỉ tiêu cá nhân hiện —." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div><button class="btn btn-secondary" id="anXls">Tải Excel</button></div><div class="panel-body" style="overflow-x:auto;"><table class="kvt"><thead><tr><th>#</th>' + th('dui', 'ma', 'Mã') + th('dui', 'ten', 'Họ tên') + th('dui', 'cap', 'Cấp') + th('dui', 'ph', 'Phòng') + th('dui', 'tot', 'DS hiện tại') + th('dui', 'fc', 'Dự kiến cuối quý') + th('dui', 'tg', 'Chỉ tiêu quý') + th('dui', 'pct', '% dự kiến / chỉ tiêu') + th('dui', 'gap', 'Dư / thiếu') + '<th>Kết quả</th></tr></thead><tbody>' + b2 + '</tbody></table></div></div>';
     }
     var rows = srt(D.rows, A.sort.du, get);
     var body = rows.map(function(r, i){
-      var op = A.open['d' + r.ten], t = '<tr class="an-row" data-k="d' + esc(r.ten) + '" style="cursor:pointer;"><td>' + (i + 1) + '</td><td><b>' + (r.ppl.length ? (op ? '▾ ' : '▸ ') : '') + esc(short(r.ten)) + '</b></td><td class="sub">' + esc(r.tp || '') + '</td><td class="num">' + r.so + '</td><td class="num">' + money(r.tot) + '</td><td class="num"><b>' + money(r.fc == null ? 0 : r.fc) + '</b></td><td class="num">' + (r.tg > 0 ? money(r.tg) : '—') + '</td><td class="num">' + pc(r.pct) + '</td><td class="num">' + gapTxt(r.gap) + '</td><td>' + badge(r) + '</td></tr>';
-      if(op) r.ppl.slice().sort(function(a, b){ return b.tot - a.tot; }).forEach(function(x){ t += '<tr style="background:var(--surface-2,#faf8ff);"><td></td><td class="sub" style="padding-left:22px;">' + esc(x.ten) + ' <span style="opacity:.7;">· ' + esc(x.ma) + '</span></td><td class="sub">' + esc(x.cap || '') + '</td><td></td><td class="num sub">' + money(x.tot) + '</td><td class="num sub">' + money(x.fc == null ? 0 : x.fc) + '</td><td class="num sub">' + (x.tg > 0 ? money(x.tg) + (x.rg ? '*' : '') : '—') + '</td><td class="num sub">' + pc(x.pct) + '</td><td class="num sub">' + gapTxt(x.gap) + '</td><td>' + badge(x) + '</td></tr>'; });
+      var op = A.open['d' + r.ten], t = '<tr class="an-row" data-k="d' + esc(r.ten) + '" style="cursor:pointer;"><td>' + (i + 1) + '</td><td><b>' + (r.ppl.length ? (op ? '▾ ' : '▸ ') : '') + esc(short(r.ten)) + '</b></td><td class="sub">' + esc(r.tp || '') + '</td><td class="num">' + r.so + '</td><td class="num">' + money(r.tot) + '</td><td class="num"><b>' + money(r.fc == null ? 0 : r.fc) + '</b></td><td class="num">' + (r.tg > 0 ? money(r.tg) : '—') + '</td><td class="num">' + pc(r.pct) + '</td><td class="num">' + gapTxt(r.gap) + '</td><td>' + badge(r) + '</td><td class="num">' + (r.nTg ? '<b style="color:' + (r.nFail ? '#DC2626' : '#0F8F6B') + ';">' + r.nFail + '</b> / ' + r.nTg : '—') + '</td></tr>';
+      if(op) r.ppl.slice().sort(function(a, b){ return b.tot - a.tot; }).forEach(function(x){ t += '<tr style="background:var(--surface-2,#faf8ff);"><td></td><td class="sub" style="padding-left:22px;">' + esc(x.ten) + ' <span style="opacity:.7;">· ' + esc(x.ma) + '</span></td><td class="sub">' + esc(x.cap || '') + '</td><td></td><td class="num sub">' + money(x.tot) + '</td><td class="num sub">' + money(x.fc == null ? 0 : x.fc) + '</td><td class="num sub">' + (x.tg > 0 ? money(x.tg) + (x.rg ? '*' : '') : '—') + '</td><td class="num sub">' + pc(x.pct) + '</td><td class="num sub">' + gapTxt(x.gap) + '</td><td>' + badge(x) + '</td><td></td></tr>'; });
       return t;
     }).join('');
-    var foot = '<tr style="font-weight:800;border-top:2px solid var(--border);"><td></td><td>Toàn công ty</td><td></td><td class="num">' + D.rows.reduce(function(a, r){ return a + r.so; }, 0) + '</td><td class="num">' + money(D.tot) + '</td><td class="num">' + money(D.fc == null ? 0 : D.fc) + '</td><td class="num">' + (D.tg > 0 ? money(D.tg) : '—') + '</td><td class="num">' + pc(D.pct) + '</td><td class="num">' + gapTxt(D.gap) + '</td><td>' + badge(D) + '</td></tr>';
-    return bar + info + '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Dự kiến KPI ' + qLabel(E.ky) + ' theo phòng (' + rows.length + ') <span title="Chỉ tiêu phòng = chỉ tiêu cấp trưởng phòng (tổng 3 tháng). Dòng nhân viên: chỉ tiêu cá nhân, dấu * là chỉ tiêu riêng. Trưởng phòng / giám đốc không có chỉ tiêu cá nhân hiện —. Mỗi phòng tính riêng, không gộp. Bấm tên phòng để xem từng nhân viên." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div><button class="btn btn-secondary" id="anXls">Tải Excel</button></div><div class="panel-body" style="overflow-x:auto;"><table class="kvt"><thead><tr><th>#</th>' + th('du', 'ten', 'Phòng') + '<th>Trưởng phòng</th>' + th('du', 'so', 'Số người') + th('du', 'tot', 'DS hiện tại') + th('du', 'fc', 'Dự kiến cuối quý') + th('du', 'tg', 'Chỉ tiêu quý') + th('du', 'pct', '% dự kiến / chỉ tiêu') + th('du', 'gap', 'Dư / thiếu') + '<th>Kết quả</th></tr></thead><tbody>' + body + foot + '</tbody></table></div></div>';
+    var foot = '<tr style="font-weight:800;border-top:2px solid var(--border);"><td></td><td>Toàn công ty</td><td></td><td class="num">' + D.rows.reduce(function(a, r){ return a + r.so; }, 0) + '</td><td class="num">' + money(D.tot) + '</td><td class="num">' + money(D.fc == null ? 0 : D.fc) + '</td><td class="num">' + (D.tg > 0 ? money(D.tg) : '—') + '</td><td class="num">' + pc(D.pct) + '</td><td class="num">' + gapTxt(D.gap) + '</td><td>' + badge(D) + '</td><td class="num">' + (D.nNs ? '<b>' + D.nNsFail + '</b> / ' + D.nNs : '—') + '</td></tr>';
+    return bar + info + sumC + '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Dự kiến KPI ' + qLabel(E.ky) + ' theo phòng (' + rows.length + ') <span title="Chỉ tiêu phòng = chỉ tiêu cấp trưởng phòng (tổng 3 tháng). Dòng nhân viên: chỉ tiêu cá nhân, dấu * là chỉ tiêu riêng. Trưởng phòng / giám đốc không có chỉ tiêu cá nhân hiện —. Mỗi phòng tính riêng, không gộp. Bấm tên phòng để xem từng nhân viên." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div><button class="btn btn-secondary" id="anXls">Tải Excel</button></div><div class="panel-body" style="overflow-x:auto;"><table class="kvt"><thead><tr><th>#</th>' + th('du', 'ten', 'Phòng') + '<th>Trưởng phòng</th>' + th('du', 'so', 'Số người') + th('du', 'tot', 'DS hiện tại') + th('du', 'fc', 'Dự kiến cuối quý') + th('du', 'tg', 'Chỉ tiêu quý') + th('du', 'pct', '% dự kiến / chỉ tiêu') + th('du', 'gap', 'Dư / thiếu') + '<th>Kết quả</th><th title="Số nhân sự dự kiến không đạt / số nhân sự có chỉ tiêu trong phòng">NS không đạt</th></tr></thead><tbody>' + body + foot + '</tbody></table></div></div>';
   }
 
   /* ---- vẽ ---- */
@@ -5782,21 +5808,21 @@ showView('view-lookup-login');
     var wb = XLSX.utils.book_new();
     if(A.tab === 'id'){
       var D = calcId(); if(D.none) return;
-      var a = [['Phòng', 'Số ID đặc biệt', 'DS nhóm đặc biệt', 'DS còn lại', 'Tổng DS phòng', '% đặc biệt / phòng', 'Tỷ trọng trong nhóm']];
-      srt(D.rows, A.sort.id, function(p, k){ return k === 'ten' ? short(p.ten) : p[k]; }).forEach(function(p){ a.push([short(p.ten), p.nSpec, Math.round(p.spec), Math.round(p.rest), Math.round(p.all), p.pct, p.share]); });
-      a.push(['Cộng', D.rows.reduce(function(s, p){ return s + p.nSpec; }, 0), Math.round(D.spec), Math.round(D.rest), Math.round(D.tot), D.pct, 1]);
+      var a = [['Phòng', 'Trưởng phòng', 'Số ID đặc biệt', 'DS nhóm đặc biệt', 'DS còn lại', 'Tổng DS phòng', '% đặc biệt / phòng', 'Tỷ trọng trong nhóm']];
+      srt(D.rows, A.sort.id, function(p, k){ return k === 'ten' ? short(p.ten) : p[k]; }).forEach(function(p){ a.push([short(p.ten), p.tp, p.nSpec, Math.round(p.spec), Math.round(p.rest), Math.round(p.all), p.pct, p.share]); });
+      a.push(['Cộng', '', D.rows.reduce(function(s, p){ return s + p.nSpec; }, 0), Math.round(D.spec), Math.round(D.rest), Math.round(D.tot), D.pct, 1]);
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a), 'Theo phòng');
-      var b = [['Phòng', 'Mã', 'Họ tên', 'Doanh số']]; D.rows.forEach(function(p){ p.list.forEach(function(x){ b.push([short(p.ten), x.ma, x.ten, Math.round(x.tot)]); }); });
+      var b = [['Phòng', 'Trưởng phòng', 'Mã', 'Họ tên', 'Doanh số']]; D.rows.forEach(function(p){ p.list.forEach(function(x){ b.push([short(p.ten), p.tp, x.ma, x.ten, Math.round(x.tot)]); }); });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(b), 'Từng ID');
       XLSX.writeFile(wb, 'phan_tich_nhom_dac_biet_' + E1.ky + '.xlsx');
     } else {
-      var Q = calcDu(), a2 = [['Phòng', 'Trưởng phòng', 'Số người', 'DS hiện tại', 'Dự kiến cuối quý', 'Chỉ tiêu quý', '% dự kiến / chỉ tiêu', 'Dư / thiếu', 'Kết quả']], b2 = [['Phòng', 'Mã', 'Họ tên', 'Cấp', 'DS hiện tại', 'Dự kiến cuối quý', 'Chỉ tiêu quý', '% dự kiến / chỉ tiêu', 'Dư / thiếu', 'Kết quả']];
+      var Q = calcDu(), a2 = [['Phòng', 'Trưởng phòng', 'Số người', 'DS hiện tại', 'Dự kiến cuối quý', 'Chỉ tiêu quý', '% dự kiến / chỉ tiêu', 'Dư / thiếu', 'Kết quả', 'NS không đạt', 'NS có chỉ tiêu']], b2 = [['Phòng', 'Mã', 'Họ tên', 'Cấp', 'DS hiện tại', 'Dự kiến cuối quý', 'Chỉ tiêu quý', '% dự kiến / chỉ tiêu', 'Dư / thiếu', 'Kết quả']];
       var rs = function(x){ return x.pct == null ? '' : x.dat ? 'Đạt' : 'Chưa đạt'; }, r0 = function(v){ return v == null ? '' : Math.round(v); };
       srt(Q.rows, A.sort.du, function(r, k){ return k === 'ten' ? short(r.ten) : r[k]; }).forEach(function(r){
-        a2.push([short(r.ten), r.tp, r.so, Math.round(r.tot), r0(r.fc), r.tg > 0 ? Math.round(r.tg) : '', r.pct == null ? '' : r.pct, r0(r.gap), rs(r)]);
+        a2.push([short(r.ten), r.tp, r.so, Math.round(r.tot), r0(r.fc), r.tg > 0 ? Math.round(r.tg) : '', r.pct == null ? '' : r.pct, r0(r.gap), rs(r), r.nFail, r.nTg]);
         r.ppl.forEach(function(x){ b2.push([short(r.ten), x.ma, x.ten, x.cap, Math.round(x.tot), r0(x.fc), x.tg > 0 ? Math.round(x.tg) : '', x.pct == null ? '' : x.pct, r0(x.gap), rs(x)]); });
       });
-      a2.push(['Toàn công ty', '', Q.rows.reduce(function(s, r){ return s + r.so; }, 0), Math.round(Q.tot), r0(Q.fc), Q.tg > 0 ? Math.round(Q.tg) : '', Q.pct == null ? '' : Q.pct, r0(Q.gap), rs(Q)]);
+      a2.push(['Toàn công ty', '', Q.rows.reduce(function(s, r){ return s + r.so; }, 0), Math.round(Q.tot), r0(Q.fc), Q.tg > 0 ? Math.round(Q.tg) : '', Q.pct == null ? '' : Q.pct, r0(Q.gap), rs(Q), Q.nNsFail, Q.nNs]);
       a2.push([]); a2.push(['Số liệu đến ngày ' + dmy(Q.last) + ' · đã qua ' + Q.wd.done + '/' + Q.wd.tot + ' ngày làm việc']);
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a2), 'Dự báo theo phòng');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(b2), 'Chi tiết nhân viên');
