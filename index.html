@@ -801,6 +801,12 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
 /* nút ẩn menu bên trái */
 .sb-hide{display:block;margin:0 0 10px auto;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#D9CCF5;border-radius:8px;width:30px;height:30px;padding:0;line-height:28px;text-align:center;font-size:15px;cursor:pointer;font-family:inherit;}
 .sb-hide:hover{background:rgba(255,255,255,.2);color:#fff;}
+/* biểu đồ nhỏ chỉ hiện khi rê chuột vào thẻ, nằm góc trên phải, không đè lên số */
+.dxcards .dxc{position:relative;}
+.dxcards .dxv{flex-wrap:nowrap;justify-content:flex-start;}
+.dxcards .dxv > span:first-child{overflow:visible !important;text-overflow:clip;max-width:100%;}
+.dxcards .dxv svg{position:absolute;top:8px;right:10px;width:64px !important;height:22px !important;opacity:0;pointer-events:none;transition:opacity .15s;background:#fff;border-radius:6px;}
+.dxcards .dxc:hover .dxv svg{opacity:1;}
 
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
@@ -5380,7 +5386,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.87';
+  var V = 'v3.89';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
