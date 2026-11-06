@@ -849,6 +849,7 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
 .dxrow11{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:14px;}
 @media(max-width:1000px){.dxrow11{grid-template-columns:minmax(0,1fr);}}
 
+
 /* ==== MOBILE (điện thoại là chính) ==== */
 .tb-burger,.sb-backdrop,.p-menu-btn{display:none;}
 @media (max-width:900px){
@@ -4812,7 +4813,7 @@ showView('view-lookup-login');
       var box = document.createElement('div'); box.id = id;
       items.forEach(function(it){
         if(it === '-'){ var l = document.createElement('div'); l.className = 'nav-sec'; l.textContent = 'Quản trị'; box.appendChild(l); return; }
-        var d = document.createElement('div'); d.className = 'nav-item' + (it[0] === 'sbc' && !adminMode ? ' only-leader' : '') + (it[0] === 'sluong' && !adminMode ? ' only-mgr' : '') + (it[0] === 'cn' && !adminMode ? ' only-mgr' : ''); d.setAttribute('data-mem', '1');
+        var d = document.createElement('div'); d.className = 'nav-item' + (it[0] === 'sbc' && !adminMode ? ' only-leader' : '') + (it[0] === 'sluong' && !adminMode ? ' only-leader' : '') + (it[0] === 'cn' && !adminMode ? ' only-mgr' : ''); d.setAttribute('data-mem', '1');
         if(it[0] !== 'ct') d.setAttribute('data-page', it[0]);
         d.innerHTML = (ICO[it[0]] || ICO.dsk) + ' ' + it[1];
         d.addEventListener('click', function(){
@@ -5200,7 +5201,7 @@ showView('view-lookup-login');
     var tp = isTP(), N = tp ? DS.topT : DS.top;
     var C = G.C, full = true, list = C.persons.filter(function(x){ return x.tot > 0; }).sort(function(a, b){ return b.tot - a.tot; }), cnt = list.length;
     list = list.slice(0, N); var mx = list.length ? list[0].tot : 1;
-    return '<div class="dxp"><div class="dxh"><div class="dxt">' + (tp ? 'Top nhân sự có doanh số tốt' : 'Nhân sự nổi bật') + ' · ' + K.kyText() + '</div><select class="select" id="dxTop">' + (tp ? [5, 10, 20, 50] : [10, 20, 50]).map(function(v){ return '<option value="' + v + '"' + (v === N ? ' selected' : '') + '>Top ' + v + '</option>'; }).join('') + '</select></div><div style="overflow-x:auto;padding:0 6px;"><table class="dxm"><thead><tr><th>#</th><th>Tên</th><th>Phòng</th><th>Cấp</th><th style="text-align:right;">KPI (đồng)</th><th>% chỉ tiêu</th></tr></thead><tbody>' +
+    return '<div class="dxp"><div class="dxh"><div class="dxt">' + 'Top nhân sự có doanh số tốt' + ' · ' + K.kyText() + '</div><select class="select" id="dxTop">' + (tp ? [5, 10, 20, 50] : [10, 20, 50]).map(function(v){ return '<option value="' + v + '"' + (v === N ? ' selected' : '') + '>Top ' + v + '</option>'; }).join('') + '</select></div><div style="overflow-x:auto;padding:0 6px;"><table class="dxm"><thead><tr><th>#</th><th>Tên</th><th>Phòng</th><th>Cấp</th><th style="text-align:right;">KPI (đồng)</th><th>% chỉ tiêu</th></tr></thead><tbody>' +
       (list.length ? list.map(function(x, i){ return '<tr><td><b>' + (i + 1) + '</b></td><td style="white-space:nowrap;">' + esc2(x.n.ho_ten) + '<div style="height:4px;border-radius:2px;background:var(--border);margin-top:4px;min-width:90px;"><div style="height:4px;border-radius:2px;background:var(--accent);width:' + Math.round(x.tot / mx * 100) + '%;"></div></div></td><td style="white-space:nowrap;">' + esc2(short(x.n.phong)) + '</td><td>' + esc2(x.n.cap) + '</td><td class="num" style="text-align:right;color:var(--accent-dark);">' + money(x.tot) + '</td><td>' + (x.pct != null ? pct(x.pct, 1) : '—') + '</td></tr>'; }).join('') : '<tr><td colspan="6" style="padding:16px;color:var(--text-muted);">Chưa có số liệu.</td></tr>') +
       '</tbody></table></div>' + (cnt > list.length ? '<div style="padding:8px 16px 12px;font-size:12px;color:var(--text-muted);">Đang hiện ' + list.length + ' / ' + cnt + ' người có số liệu.</div>' : '') + '</div>';
   }
@@ -5223,10 +5224,12 @@ showView('view-lookup-login');
           SBC.rpc('hr_xep_hang_phong', {p_tu:rg2.tu, p_den:rg2.den, p_ma:a2.ma || null, p_pin:a2.pin || null}).then(function(r){ if(DS.rkpKey === key2){ DS.rkp = (r && r.data) || {ok:false}; if(LIVE.dashRedraw) LIVE.dashRedraw(); } }, function(){ if(DS.rkpKey === key2){ DS.rkp = {ok:false}; if(LIVE.dashRedraw) LIVE.dashRedraw(); } });
         }
       }
+      var vaiK = K.data && K.data.vai, t2 = isTP(), t3 = vaiK === 'NV' || vaiK === 'CTV', t1 = !t2 && !t3;
+      var CH = '<div class="dxp"><div class="dxh"><div><div class="dxt">' + (isTP() ? 'Diễn biến KPI của phòng' : t3 ? 'Diễn biến KPI' : 'Diễn biến KPI toàn team') + '</div><div style="font-size:12px;color:var(--text-muted);">' + k.kyText() + ' · ' + info.nPeople + ' người · ' + info.nPh + ' phòng</div></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><div class="dxseg">' + seg('Ngày', DS.gran === 'ngay', 'dx-gran', 'data-g="ngay"') + seg('Tuần', DS.gran === 'tuan', 'dx-gran', 'data-g="tuan"') + seg('Tháng', DS.gran === 'thang', 'dx-gran', 'data-g="thang"') + '</div><div class="dxseg">' + seg('Theo mốc', !DS.cum, 'dx-cum', 'data-c="0"') + seg('Lũy kế', DS.cum, 'dx-cum', 'data-c="1"') + '</div></div></div><div style="padding:0 16px 14px;">' + mainChart() + '</div></div>';
       var h = '<div style="' + (k.loading ? 'opacity:.55;pointer-events:none;' : '') + '">' + (LIVE.lhBanner ? LIVE.lhBanner() : '') + cards() +
-        '<div class="dxrow">' + (isTP() ? top() : topDay()) + detail() + '</div>' +
-        '<div class="dxrow11"><div class="dxp"><div class="dxh"><div><div class="dxt">' + (isTP() ? 'Diễn biến KPI của phòng' : 'Diễn biến KPI toàn team') + '</div><div style="font-size:12px;color:var(--text-muted);">' + k.kyText() + ' · ' + info.nPeople + ' người · ' + info.nPh + ' phòng</div></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><div class="dxseg">' + seg('Ngày', DS.gran === 'ngay', 'dx-gran', 'data-g="ngay"') + seg('Tuần', DS.gran === 'tuan', 'dx-gran', 'data-g="tuan"') + seg('Tháng', DS.gran === 'thang', 'dx-gran', 'data-g="thang"') + '</div><div class="dxseg">' + seg('Theo mốc', !DS.cum, 'dx-cum', 'data-c="0"') + seg('Lũy kế', DS.cum, 'dx-cum', 'data-c="1"') + '</div></div></div><div style="padding:0 16px 14px;">' + mainChart() + '</div></div>' +
-        heat() + '</div>' + (isTP() ? '' : top()) + '</div>';
+        (t1 ? '<div class="dxrow">' + top() + topDay() + '</div><div class="dxrow">' + CH + detail() + '</div><div class="dxrow1">' + heat() + '</div>'
+          : t2 ? '<div class="dxrow11">' + top() + CH + '</div>'
+          : (G.units.length > 1 ? '<div class="dxrow11">' + topDay() + CH + '</div>' : '<div class="dxrow1">' + CH + '</div>')) + '</div>';
       return ctl + h;
     },
     on: function(ev, type, redraw){
@@ -5470,7 +5473,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.100';
+  var V = 'v3.105';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -5566,6 +5569,7 @@ showView('view-lookup-login');
   LIVE.loanDraw = function(){ drawMain(); LIVE.loanImpDraw(); };
   drawMain = function(){
     var h = '<div class="page-head"><div><h1>Khoản vay đến hạn</h1><p>Các tài khoản có khoản vay sắp đến hạn trong phạm vi của bạn. Liên hệ khách sớm để xử lý trước ngày đáo hạn.</p></div></div>';
+    h += '<div class="callout" style="margin-bottom:14px;"><div>ℹ️</div><div><b>Dữ liệu khoản vay chưa đầy đủ</b>, anh chị chủ động kiểm tra lại mail hoặc liên hệ trưởng phòng để được hỗ trợ.</div></div>';
     if(!LIVE.on && !LIVE.member){ box.innerHTML = h + '<div class="panel"><div style="padding:28px 22px;text-align:center;color:var(--text-muted);font-size:13.5px;">Trang này chỉ dùng được khi đã đăng nhập.</div></div>'; return; }
     if(!L.setup){ box.innerHTML = h + '<div class="callout"><div>⚠️</div><div>Chưa bật chức năng. Mở Supabase → <b>SQL Editor</b> → dán nội dung file <b>dao_han.sql</b> → <b>Run</b>, rồi tải lại trang.</div></div>'; return; }
     if(L.msg) h += '<div class="callout" style="margin-bottom:14px;"><div>✓</div><div>' + esc(L.msg) + '</div></div>';
