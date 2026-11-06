@@ -5228,7 +5228,7 @@ showView('view-lookup-login');
       var CH = '<div class="dxp"><div class="dxh"><div><div class="dxt">' + (isTP() ? 'Diễn biến KPI của phòng' : t3 ? 'Diễn biến KPI' : 'Diễn biến KPI toàn team') + '</div><div style="font-size:12px;color:var(--text-muted);">' + k.kyText() + ' · ' + info.nPeople + ' người · ' + info.nPh + ' phòng</div></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><div class="dxseg">' + seg('Ngày', DS.gran === 'ngay', 'dx-gran', 'data-g="ngay"') + seg('Tuần', DS.gran === 'tuan', 'dx-gran', 'data-g="tuan"') + seg('Tháng', DS.gran === 'thang', 'dx-gran', 'data-g="thang"') + '</div><div class="dxseg">' + seg('Theo mốc', !DS.cum, 'dx-cum', 'data-c="0"') + seg('Lũy kế', DS.cum, 'dx-cum', 'data-c="1"') + '</div></div></div><div style="padding:0 16px 14px;">' + mainChart() + '</div></div>';
       var h = '<div style="' + (k.loading ? 'opacity:.55;pointer-events:none;' : '') + '">' + (LIVE.lhBanner ? LIVE.lhBanner() : '') + cards() +
         (t1 ? '<div class="dxrow">' + top() + topDay() + '</div><div class="dxrow">' + CH + detail() + '</div><div class="dxrow1">' + heat() + '</div>'
-          : t2 ? '<div class="dxrow11">' + top() + CH + '</div>'
+          : t2 ? '<div class="dxrow1">' + CH + '</div><div class="dxrow">' + top() + detail() + '</div>'
           : (G.units.length > 1 ? '<div class="dxrow11">' + topDay() + CH + '</div>' : '<div class="dxrow1">' + CH + '</div>')) + '</div>';
       return ctl + h;
     },
@@ -5473,7 +5473,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.105';
+  var V = 'v3.106';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
