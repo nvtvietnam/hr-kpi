@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HRM · Nhân sự &amp; KPI (Mockup)</title>
+<title>HRM · Nhân sự &amp; KPI</title>
 <style>
 
 :root{
@@ -998,15 +998,42 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
 /* số dùng Inter, chữ số cùng độ rộng */
 .num,.set-row input,.tbl-in,.ex-row .exv{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;font-variant-numeric:tabular-nums;font-weight:600;}
 
+
+/* ===== Chi tiết hoàn thiện (v3.114) ===== */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+button,[role=button],a,select,summary,label.chk{touch-action:manipulation;}
+button,a{-webkit-tap-highlight-color:rgba(124,58,237,.12);}
+::selection{background:rgba(124,58,237,.22);}
+:focus-visible{outline:2px solid #7C3AED;outline-offset:2px;}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline-offset:0;}
+button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important;}}
+@media (max-width:700px){
+  input:not([type=checkbox]):not([type=radio]):not([type=file]):not(.tbl-in):not(.dk-ctm),select,textarea{font-size:16px !important;}
+}
+@media print{.sidebar,.topbar,nav,.kvbar,button{display:none !important;}body{background:#fff !important;}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#4F3FA8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="NS & KPI"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" type="image/png" href="icon-192.png">
+<script>
+/* Thư viện xuất file nạp sau khi trang đã hiện (không chặn lúc mở app) */
+(function(){var L=["https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js", "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"],i=0;
+function nxt(){if(i>=L.length)return;var sc=document.createElement('script');sc.src=L[i++];sc.onload=sc.onerror=nxt;document.head.appendChild(sc);}
+function go(){setTimeout(nxt,300);}
+if(document.readyState==='complete')go();else window.addEventListener('load',go);})();
+</script>
+
+
+
+
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#4F3FA8">
+<meta name="description" content="Hệ thống quản lý nhân sự và KPI nội bộ.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="format-detection" content="telephone=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="NS & KPI"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" type="image/png" href="icon-192.png">
 <script>if("serviceWorker" in navigator && /^https?:/.test(location.protocol)){ window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); }); }</script>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fkgkmobwoiptfrbiverh.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -1021,11 +1048,11 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
       <div class="login-body" style="padding-top:22px;">
         <div class="field">
           <label>Mã nhân sự hoặc email</label>
-          <input type="text" id="lkCode" placeholder="Mã nhân sự (VD: B0045) hoặc email" value="" autocomplete="username">
+          <input type="text" id="lkCode" placeholder="Mã nhân sự (VD: B0045) hoặc email" value="" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next">
         </div>
         <div class="field">
           <label>PIN hoặc mật khẩu</label>
-          <input type="password" id="lkPin" placeholder="PIN 6 số hoặc mật khẩu" value="" autocomplete="current-password"><div id="lkErr" style="display:none;color:var(--red);font-size:12px;margin-top:6px;"></div>
+          <input type="password" id="lkPin" placeholder="PIN 6 số hoặc mật khẩu" value="" autocomplete="current-password" enterkeyhint="go"><div id="lkErr" style="display:none;color:var(--red);font-size:12px;margin-top:6px;"></div>
           <div class="field-hint">Nhân sự, CTV: mã nhân sự + PIN 6 số do Admin cấp. Leader: email + mật khẩu. Quên PIN? Liên hệ Admin.</div>
         </div>
         <button class="login-submit" id="btnLookupLogin">Đăng nhập</button>
@@ -1070,7 +1097,7 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
       <div class="login-body">
         <div class="field">
           <label>Email</label>
-          <input type="email" id="mgEmail" placeholder="email đăng nhập" autocomplete="username">
+          <input type="email" id="mgEmail" placeholder="email đăng nhập" autocomplete="username" autocapitalize="off" spellcheck="false">
         </div>
         <div class="field">
           <label>Mật khẩu</label>
@@ -1300,7 +1327,7 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
           </div>
         </div>
 
-        <div style="text-align:center;color:var(--text-muted);font-size:11.5px;padding:16px 0 4px;">Mockup tĩnh · Giai đoạn 2 — Dashboard Admin · Dữ liệu minh họa, chưa kết nối Supabase</div>
+        
       </div>
 
             <!-- ============ PAGE: NHÂN SỰ ============ -->
@@ -1343,7 +1370,7 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
           </div>
           <div class="table-foot"><span id="empFootText"></span><span id="empFootRight">Dữ liệu minh họa</span></div>
         </div>
-        <div id="empMockNote" style="text-align:center;color:var(--text-muted);font-size:11.5px;padding:16px 0 4px;">Mockup tĩnh · Admin — Nhân sự · Dữ liệu minh họa, chưa kết nối Supabase</div>
+        
       </div>
 
       <!-- ============ PAGE: KPI & KPI GỐC ============ -->
@@ -1421,7 +1448,7 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
           </div>
           <div style="display:flex;justify-content:flex-end;"><button class="btn btn-primary" id="setSave">Lưu cài đặt (demo)</button></div>
         </div>
-        <div style="text-align:center;color:var(--text-muted);font-size:11.5px;padding:16px 0 4px;">Mockup tĩnh · Admin — KPI &amp; KPI gốc · Dữ liệu minh họa, chưa kết nối Supabase</div>
+        
       </div>
 
       <!-- ============ PAGE: IMPORT KPI HẰNG NGÀY ============ -->
@@ -1458,13 +1485,13 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
             <div class="up-grid">
               <div class="up-card" data-card="f13">
                 <h4>File 13</h4><div class="up-sub">DvtcReport_013 — báo cáo tổng hợp theo NV tư vấn đầu tư. Cả team một file (~2.000 dòng). Mỗi ID môi giới một dòng.</div>
-                <div class="dropzone" data-drop="f13"><div class="dz-title">Chọn file Excel</div><div class="dz-sub">Mockup: bấm để giả lập</div></div>
+                <div class="dropzone" data-drop="f13"><div class="dz-title">Chọn file Excel</div><div class="dz-sub">Bấm để chọn file</div></div>
                 <div class="file-chip" data-chip="f13"><div class="list-icon blue">XLS</div><div style="flex:1;"><div class="fname"></div><div class="fmeta">3.012 dòng · Sheet 1</div></div><button class="btn btn-secondary btn-sm" data-rm="f13">Bỏ</button></div>
                 <div class="req-cols"><span class="badge badge-blue">ID</span><span class="badge badge-blue">Phòng</span><span class="badge badge-blue">Phí net được tính KPI</span><span class="badge badge-blue">Phí net giải chấp</span><span class="badge badge-blue">HĐ phái sinh thường / HTĐT</span><span class="badge badge-blue">Phái sinh giải chấp</span><span class="badge badge-blue">SL TK mở mới</span></div>
               </div>
               <div class="up-card" data-card="f17">
                 <h4>File 17</h4><div class="up-sub">DVTC_17 — báo cáo doanh số giao dịch được miễn phí. Có cả Người quản lý và Chức danh.</div>
-                <div class="dropzone" data-drop="f17"><div class="dz-title">Chọn file Excel</div><div class="dz-sub">Mockup: bấm để giả lập</div></div>
+                <div class="dropzone" data-drop="f17"><div class="dz-title">Chọn file Excel</div><div class="dz-sub">Bấm để chọn file</div></div>
                 <div class="file-chip" data-chip="f17"><div class="list-icon blue">XLS</div><div style="flex:1;"><div class="fname"></div><div class="fmeta">3.012 dòng · Sheet 1</div></div><button class="btn btn-secondary btn-sm" data-rm="f17">Bỏ</button></div>
                 <div class="req-cols"><span class="badge badge-blue">Trader ID</span><span class="badge badge-blue">GTGD cơ sở miễn phí tính KPI</span><span class="badge badge-blue">SL HĐTL miễn phí tính KPI</span></div>
               </div>
@@ -1533,7 +1560,7 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
             <tbody id="impHist"></tbody>
           </table></div>
         </div>
-        <div style="text-align:center;color:var(--text-muted);font-size:11.5px;padding:16px 0 4px;">Mockup tĩnh · Admin — Import KPI hằng ngày · Dữ liệu minh họa, chưa kết nối Supabase</div>
+        
       </div>
 
 
@@ -1563,7 +1590,7 @@ table.dp-tbl thead th{position:sticky;top:0;z-index:2;background:#EDE8F8;box-sha
         <div class="field"><label>Ngày nghỉ việc</label><input type="date" id="fEmpLeave"></div>
         <div class="field"><label>Lý do nghỉ / chuyển</label><input id="fEmpWhy" placeholder="VD: nghỉ việc, chuyển công ty, xuống CTV..."></div>
         <div class="field"><label>Ghi chú</label><input id="fEmpNote" placeholder="Ghi chú thêm"></div>
-        <div class="field" id="fEmpPinWrap"><label>PIN tra cứu ban đầu</label><div class="pin-row"><input id="fEmpPin" placeholder="4–6 số"><button class="btn-otp" type="button" id="btnGenPin">Tạo ngẫu nhiên</button></div><div class="field-hint">Admin cấp, nhân sự tự đổi sau.</div></div>
+        <div class="field" id="fEmpPinWrap"><label>PIN tra cứu ban đầu</label><div class="pin-row"><input id="fEmpPin" placeholder="6 số" inputmode="numeric" maxlength="6"><button class="btn-otp" type="button" id="btnGenPin">Tạo ngẫu nhiên</button></div><div class="field-hint">Admin cấp, nhân sự tự đổi sau.</div></div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" id="empModalCancel">Hủy</button><button class="btn btn-primary" id="empModalSave">Lưu nhân sự</button></div>
@@ -1688,7 +1715,7 @@ showView('view-lookup-login');
     n.addEventListener('click', function(){ adminGo(n.getAttribute('data-page')); });
   });
   adminView.querySelectorAll('.nav-item:not([data-page])').forEach(function(n){
-    n.addEventListener('click', function(){ toast('Trang "' + n.textContent.trim() + '" chưa dựng trong mockup'); });
+    n.addEventListener('click', function(){ toast('Trang "' + n.textContent.trim() + '" chưa có'); });
   });
   document.querySelectorAll('[data-page-go]').forEach(function(el){
     el.addEventListener('click', function(){ adminGo(el.getAttribute('data-page-go')); });
@@ -1713,7 +1740,7 @@ showView('view-lookup-login');
   function dow(iso){ return new Date(iso + 'T00:00:00Z').getUTCDay(); }
   function weekdays(a, b){ var c = 0; for(var d = a; d <= b; d = addDays(d,1)){ var w = dow(d); if(w>=1 && w<=5) c++; } return c; }
 
-  /* ---------- cài đặt (mockup; thật sự nằm ở Supabase, chỉ Admin) ---------- */
+  /* ---------- cài đặt (thật sự nằm ở Supabase, chỉ Admin) ---------- */
   var ORDER = ['CTV','CV1','CV2','TP1','TP2','TP3','GĐ1','GĐ2','GĐ3','GĐ4','GĐ5'];
   var CFG = {
     levels: {
@@ -1901,8 +1928,8 @@ showView('view-lookup-login');
         '<td><span class="badge '+STATUS_BADGE[e.status]+'">'+e.status+'</span>'+(e.leaveDate ? '<div class="emp-code">Nghỉ '+fmtDate(e.leaveDate)+(e.why ? ' · '+e.why : '')+'</div>' : (e.note ? '<div class="emp-code">'+e.note+'</div>' : ''))+'</td>'+
         '<td><div class="row-actions"><button class="btn btn-secondary btn-sm" data-edit="'+e.code+'">Sửa</button><button class="btn btn-secondary btn-sm" data-pin="'+e.code+'">Cấp lại PIN</button></div></td></tr>';
     }).join('');
-    document.getElementById('empFootText').textContent = (LIVE.on ? 'Hiển thị ' + Math.min(200, rows.length) + ' / ' + rows.length + ' kết quả (tổng ' + LV().length + ' nhân sự). Dùng ô tìm kiếm để lọc.' : 'Hiển thị ' + rows.length + ' / ' + EMP.length + ' nhân sự trong mockup');
-    document.getElementById('empFootRight').textContent = LIVE.on ? 'Dữ liệu thật từ máy chủ' : 'Dữ liệu minh họa'; document.getElementById('empMockNote').style.display = LIVE.on ? 'none' : '';
+    document.getElementById('empFootText').textContent = (LIVE.on ? 'Hiển thị ' + Math.min(200, rows.length) + ' / ' + rows.length + ' kết quả (tổng ' + LV().length + ' nhân sự). Dùng ô tìm kiếm để lọc.' : 'Hiển thị ' + rows.length + ' / ' + EMP.length + ' nhân sự');
+    document.getElementById('empFootRight').textContent = 'Dữ liệu từ máy chủ';
     var tot = LV().length, nPh = LIVE.on ? (LIVE.phActive ? LIVE.phActive().length : LIVE.phong.length) : DEPTS.length, filt = !!(q || d || roleSet.length || s);
     var seenD = {}; rows.forEach(function(e){ seenD[e.dept] = 1; });
     var fm = function(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); };
@@ -2068,7 +2095,7 @@ showView('view-lookup-login');
       '<div class="stat-card"><div class="stat-label">'+l1+'</div><div class="stat-value" style="color:var(--green);">'+cnt.pass+'</div></div>'+
       '<div class="stat-card"><div class="stat-label">'+l2+'</div><div class="stat-value" style="color:var(--red);">'+cnt.fail+'</div><div class="stat-sub">'+(cnt.nokpi ? cnt.nokpi+' người chưa nhập KPI' : 'Đã nhập đủ KPI')+'</div></div>'+
       '<div class="stat-card"><div class="stat-label">Tổng DT Net tính KPI (cá nhân)</div><div class="stat-value">'+fmtTr(sumDt)+' tr</div></div>';
-    document.getElementById('kFoot').textContent = 'Hiển thị ' + rows2.length + ' / ' + all.length + ' dòng trong mockup · TP/GĐ: DT Net là của cả phòng (gồm NV, CTV và bản thân), tỷ lệ thưởng theo VSI cá nhân' + (per.running ? ' · Kỳ đang chạy: so với tiến độ thời gian' : '');
+    document.getElementById('kFoot').textContent = 'Hiển thị ' + rows2.length + ' / ' + all.length + ' dòng · TP/GĐ: DT Net là của cả phòng (gồm NV, CTV và bản thân), tỷ lệ thưởng theo VSI cá nhân' + (per.running ? ' · Kỳ đang chạy: so với tiến độ thời gian' : '');
   }
   ['kSearch','kDept','kRes'].forEach(function(id){ document.getElementById(id).addEventListener(id==='kSearch'?'input':'change', renderKpi); });
 
@@ -2606,12 +2633,12 @@ showView('view-lookup-login');
     return out;
   }
   async function loadAll(){
-    var ph = await fetchAll('hr_phong', '*', 'id');
+    var pl_p = SBC.from('hr_phong_lich_su').select('id,phong_id,loai,ngay').order('ngay').order('id').then(function(x){ return x; }, function(){ return {error:1}; });
+    var all = await Promise.all([fetchAll('hr_phong', '*', 'id'), pl_p, fetchAll('hr_nhan_su', '*', 'ma_nv'), fetchAll('hr_id_moi_gioi', 'id_mg,ma_nv', 'id_mg')]);
+    var ph = all[0], pl = all[1], ns = all[2], ids = all[3];
     LIVE.phong = ph;
-    try { var pl = await SBC.from('hr_phong_lich_su').select('id,phong_id,loai,ngay').order('ngay').order('id'); LIVE.phongLog = pl.error ? [] : (pl.data || []); } catch(e){ LIVE.phongLog = []; }
+    LIVE.phongLog = (!pl || pl.error) ? [] : (pl.data || []);
     PHONG.length = 0; ph.forEach(function(p){ PHONG.push({id:p.id, name:p.ten, head:p.ten_truong_phong, mgr:p.ma_ql_truc_tiep, closed:!!p.da_dong, closeDate:p.ngay_dong || ''}); });
-    var ns = await fetchAll('hr_nhan_su', '*', 'ma_nv');
-    var ids = await fetchAll('hr_id_moi_gioi', 'id_mg,ma_nv', 'id_mg');
     var idBy = {}; ids.forEach(function(x){ (idBy[x.ma_nv] = idBy[x.ma_nv] || []).push(x.id_mg); });
     var nameBy = {}; ph.forEach(function(p){ nameBy[p.id] = p.ten; });
     LIVE.emp = ns.map(function(n){
@@ -5534,7 +5561,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.111';
+  var V = 'v3.115';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
