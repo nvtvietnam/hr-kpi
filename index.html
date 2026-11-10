@@ -1222,6 +1222,20 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;}
 
 #cnContent .stk{z-index:15;}
 
+
+/* KPI: nút quay lại tổng quan các phòng (v3.117) */
+.kv-backbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;background:#F1E8FD;border:1px solid #D9C6F7;border-radius:10px;position:sticky;top:68px;z-index:12;box-shadow:0 4px 14px rgba(60,30,120,.08);}
+.kv-backbar span{font-size:13px;color:var(--text-muted);}
+@media (max-width:900px){.kv-backbar{top:60px;padding:8px 10px;gap:8px;} .kv-backbar .btn{width:100%;justify-content:center;} .kv-backbar span{font-size:12.5px;}}
+
+/* KPI: phần chi tiết khi bấm đổi sang màu vàng cam cho nổi (v3.117) */
+.kvw tr.kv-dt > td{background:#FFF7E0 !important;border-top:2px solid #F59E0B;border-bottom:2px solid #F59E0B;}
+.kvw .kv-dbox{background:#FFF7E0;border-left:5px solid #F59E0B;}
+.kvw tr.kv-ph:has(+ tr.kv-dt) td,.kvw tr.kv-ca:has(+ tr.kv-dt) td{background:#FFE7A8 !important;color:#5A3A00;}
+.kvw .kv-dh{color:#92400E;} .kvw .kv-dh b{color:#7C2D12;}
+.kvw .kv-dline .kv-dt0 b{color:#B45309;}
+.kvw .kv-dbox .kv-ph-go{background:#F59E0B;border:1px solid #D97706;color:#fff;font-weight:700;padding:6px 14px;font-size:12.5px;}
+.kvw .kv-dbox .kv-ph-go:hover{background:#D97706;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -4319,6 +4333,7 @@ showView('view-lookup-login');
           '<button class="btn btn-secondary kv-last">Ngày gần nhất</button><button class="btn btn-secondary kv-lastw">Tuần gần nhất</button>' + (function(){ var dc = dayCount(rg); return '<span class="kv-days ' + dc.state + '" title="Ngày làm việc trong ' + (S.span === 'quy' ? 'quý' : 'tháng') + ' (trừ thứ 7, chủ nhật và ngày nghỉ đã cài)">' + (dc.state === 'pre' ? '⏳ Chưa bắt đầu · ' + dc.tot + ' ngày' : dc.state === 'end' ? '🏁 Đã kết thúc · ' + dc.tot + ' ngày' : '🔥 <b>' + dc.done + '/' + dc.tot + '</b> · còn <b>' + dc.left + '</b>') + '</span>'; })() +
           '<span style="font-size:12.5px;color:var(--text-muted);">' + (S.span === 'quy' ? quyLabel(S.ky).replace(/\s*\(.*\)/, '') : S.span === 'nam' ? 'Năm ' + S.ky.slice(0,4) : '') + (isFull ? '' : ' · ' + dm(S.from) + ' → ' + dm(S.to)) + (isFull ? '' : ' <a href="#" class="kv-reset" style="color:var(--accent-dark);">· Xem lại cả ' + (S.span === 'quy' ? 'quý' : S.span === 'nam' ? 'năm' : 'tháng') + '</a>') + '</span>');
         /* bảng */
+        if(S.mode === 'canhan' && S.back) h += '<div class="kv-backbar"><button class="btn btn-primary kv-back">← Quay lại tổng quan các phòng</button><span>Đang xem từng người của <b>' + esc(S.phong.map(short).join(', ')) + '</b></span></div>';
         if(S.mode === 'phong'){
           var LAD = ladder(), pl = sortBy(C.phongs.filter(function(x){ return !(closedPh(x.p.ten) && !(x.tot > 0)); }).filter(function(x){ return LIVE.grpOk(S.grp, x.p.ten, ''); }).filter(function(x){ return !S.phong.length || S.phong.indexOf(x.p.ten) > -1; }), 'phong', function(x, k){ return {ten:short(x.p.ten), tp:x.tp, so:x.so, cs:x.v.cs, ps:x.v.ps, gc:x.v.gc, mf:x.v.mf, tot:x.tot, hh:hoaHong(x), cur:nextRung(x.tot, LAD).re ? nextRung(x.tot, LAD).re.thr : 0, luong:nextRung(x.tot, LAD).re ? salaryOf(nextRung(x.tot, LAD).re.l) : 0, nx:nextRung(x.tot, LAD).gap, tg:x.tg || null, pct:x.pct}[k]; }), T = ZERO(); pl.forEach(function(x){ T.cs += x.v.cs; T.ps += x.v.ps; T.gc += x.v.gc; T.mf += x.v.mf; });
           h += '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">KPI từng phòng (' + pl.length + ') <span title="Tổng KPI = Cơ sở + Phái sinh + Giải chấp + Miễn phí của cả phòng. Chỉ tiêu phòng = chỉ tiêu của cấp trưởng phòng. Đạt / Chưa đạt chỉ hiện khi xem từ đầu tháng (hoặc đầu quý). Quý: chỉ tiêu = tổng 3 tháng. Bấm tên cột để sắp xếp." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div>' + (phOpts.length > 1 ? msel('phong', 'Tất cả phòng', 'phòng', phOpts.map(function(p){ return {v:p, t:short(p)}; }), S.phong) : '') + grpTools('phong') + '<button class="btn btn-secondary" id="kvXls">Tải Excel</button><button class="btn btn-secondary" id="kvShot" title="Chụp ảnh toàn bộ bảng để gửi">📷 Chụp ảnh</button></div><div class="panel-body"><table class="kvt kvt-ph"><thead><tr><th>#</th>' + th('phong', 'ten', 'Phòng') + th('phong', 'tp', 'Trưởng phòng') + th('phong', 'so', 'Số người') + th('phong', 'tot', 'Tổng KPI') + th('phong', 'cur', 'Chức danh hiện tại', 'Chức danh cao nhất mà Tổng KPI của phòng đã đạt mốc') + th('phong', 'luong', 'Lương cứng tạm tính', 'Lương cứng của chức danh hiện tại') + th('phong', 'tg', 'Chỉ tiêu') + th('phong', 'pct', '% hoàn thành') + th('phong', 'nx', 'Chức danh tiếp theo', 'Mức chức danh gần nhất chưa đạt và số tiền KPI còn thiếu để đạt') + '</tr></thead><tbody>' +
@@ -4449,13 +4464,14 @@ showView('view-lookup-login');
         b = t.closest('.kv-reset'); if(b){ ev.preventDefault(); var fr = fullRange(); S.from = fr.from; S.to = fr.to; cfg.redraw(); return true; }
         b = t.closest('.kv-def'); if(b){ S.setDef(); return true; }
         
-        b = t.closest('.kv-mode'); if(b){ S.mode = b.getAttribute('data-m'); cfg.redraw(); return true; }
+        b = t.closest('.kv-mode'); if(b){ S.mode = b.getAttribute('data-m'); S.back = null; cfg.redraw(); return true; }
         b = t.closest('.kv-all'); if(b){ if(S.span !== 'ky'){ S.load(S.ky); return true; } var f = fullRange(); S.from = f.from; S.to = f.to; cfg.redraw(); return true; }
         b = t.closest('.kv-nam'); if(b){ if(S.span === 'nam'){ var fn = fullRange(); S.from = fn.from; S.to = fn.to; cfg.redraw(); return true; } S.span = 'nam'; S.from = ''; S.to = ''; S.load(); return true; }
         b = t.closest('.kv-quy'); if(b){ if(S.span === 'quy'){ var fq = fullRange(); S.from = fq.from; S.to = fq.to; cfg.redraw(); return true; } S.span = 'quy'; S.from = ''; S.to = ''; S.load(); return true; }
         b = t.closest('.kv-lastw'); if(b){ var f3 = fullRange(), pp = f3.to.split('-'), dt = new Date(Date.UTC(+pp[0], +pp[1] - 1, +pp[2])), dw = (dt.getUTCDay() + 6) % 7, iso3 = function(d){ return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + d.getUTCDate()).slice(-2); }; var mon, sun; if(dw >= 4){ mon = new Date(dt.getTime() - dw * 864e5); sun = dt; } else { mon = new Date(dt.getTime() - (dw + 7) * 864e5); sun = new Date(mon.getTime() + 6 * 864e5); } var a3 = iso3(mon), z3 = iso3(sun); S.from = a3 < f3.from ? f3.from : a3; S.to = z3 > f3.to ? f3.to : z3; if(S.from > S.to){ S.from = f3.from; S.to = f3.to; } cfg.redraw(); return true; }
         b = t.closest('.kv-last'); if(b){ var f2 = fullRange(); S.from = S.to = f2.to; cfg.redraw(); return true; }
-        b = t.closest('.kv-ph-go'); if(b){ S.phong = [b.getAttribute('data-p')]; S.mode = 'canhan'; S.openCa = ''; cfg.redraw(); return true; }
+        b = t.closest('.kv-ph-go'); if(b){ S.back = {phong:S.phong.slice(), openPh:S.openPh, y:window.scrollY}; S.phong = [b.getAttribute('data-p')]; S.mode = 'canhan'; S.openCa = ''; cfg.redraw(); return true; }
+        b = t.closest('.kv-back'); if(b && S.back){ var bk = S.back; S.back = null; S.mode = 'phong'; S.phong = bk.phong; S.openPh = bk.openPh; S.openCa = ''; cfg.redraw(); setTimeout(function(){ window.scrollTo(0, bk.y || 0); }, 30); return true; }
         b = t.closest('.kv-dt'); if(b) return true;
         b = t.closest('.kv-ph'); if(b){ var pn1 = b.getAttribute('data-p'); S.openPh = S.openPh === pn1 ? '' : pn1; cfg.redraw(); return true; }
         b = t.closest('.kv-ca'); if(b){ var id1 = b.getAttribute('data-id'); S.openCa = S.openCa === id1 ? '' : id1; cfg.redraw(); return true; }
@@ -5771,7 +5787,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.116';
+  var V = 'v3.117';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
