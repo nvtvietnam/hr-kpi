@@ -1236,6 +1236,9 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;}
 .kvw .kv-dline .kv-dt0 b{color:#B45309;}
 .kvw .kv-dbox .kv-ph-go{background:#F59E0B;border:1px solid #D97706;color:#fff;font-weight:700;padding:6px 14px;font-size:12.5px;}
 .kvw .kv-dbox .kv-ph-go:hover{background:#D97706;}
+
+#cnContent .cap table.lad td,#cnContent .cap table.lad th{padding:4px 6px;font-size:12.5px;}
+#cnContent .lhint{background:#FFF7E0;border-left:4px solid #F59E0B;border-radius:0 8px 8px 0;padding:8px 12px;font-size:13px;margin-bottom:6px;color:#5A3A00;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -5787,7 +5790,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.117';
+  var V = 'v3.119';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -7220,22 +7223,30 @@ function view(){
 var GROUP = 'kh', EDIT = false;
 var CAP = [
   {id:'ctv', ten:'CTV', mau:'#0E9F6E', nen:'#E6F8F1', luong:'Không có lương cứng', l0:0, cs:65, ps:40, ql:[], dn:false},
-  {id:'nv', ten:'Nhân viên', mau:'#1D4ED8', nen:'#DBEAFE', luong:'2 mốc: 5 triệu hoặc 8 triệu', l0:5, moc:[[5, 30], [8, 50]], cs:63, ps:40, ql:[], dn:true},
+  {id:'nv', ten:'Nhân viên', mau:'#1D4ED8', nen:'#DBEAFE', luong:'2 mốc: 5,31 triệu hoặc 8 triệu', l0:5.31, moc:[[5.31, 30], [8, 50]], cs:63, ps:40, ql:[], dn:true},
   {id:'tp', ten:'Trưởng phòng', bac:'3 cấp', mau:'#D9620B', nen:'#FEF0E0', luong:'14 – 20 triệu', l0:14, cs:63, ps:40, ql:[[3.5, 'doanh số net của toàn phòng']], dn:true, gc:'Hoa hồng cá nhân và phí quản lý giống nhau cho cả 3 cấp.'},
   {id:'gd', ten:'Giám đốc', bac:'5 cấp', mau:'#6D28D9', nen:'#EDE9FE', luong:'25 – 50 triệu', l0:25, cs:63, ps:40, ql:[[3.5, 'doanh số net của phòng trực tiếp'], [1, 'doanh số net các phòng bên dưới']], dn:true, gc:'Hoa hồng cá nhân và phí quản lý giống nhau cho cả 5 cấp.'}
 ];
 var DN = {cs:3.57, csMin:13, ps:0.45};
 var NS = {cap:'nv', cs:50, ps:10, luong:8, ph:300, duoi:500};
 function capOf(id){ return CAP.filter(function(c){ return c.id === id; })[0]; }
+/* bậc lương – KPI lấy từ cài đặt KPI (CFG.levels) */
+var LADF = {nv:'CV', tp:'TP', gd:'GĐ'};
+function lad(id){ var L = typeof CFG !== 'undefined' && CFG && CFG.levels, f = LADF[id]; if(!L || !f) return []; return Object.keys(L).filter(function(k){ return k.indexOf(f) === 0; }).map(function(k){ return {l:k, thr:Number(L[k].std) || 0, sal:Number(L[k].salary) || 0}; }).filter(function(o){ return o.thr > 0; }).sort(function(a, b){ return a.thr - b.thr; }); }
+function kpiIn(){ return NS.cap === 'nv' ? NS.cs : NS.ph; }
+function rung(id, tr){ var L = lad(id), re = null, nx = null; L.forEach(function(o){ if(o.thr <= tr * 1e6) re = o; else if(!nx) nx = o; }); return {re:re, nx:nx, L:L}; }
+function ladH(c){ var L = lad(c.id); if(!L.length) return ''; return '<table class="t lad" style="margin-top:6px;"><tr><th>Cấp</th><th class="r">' + (c.id === 'nv' ? 'KPI phí net cơ sở/tháng' : 'KPI phòng/tháng') + '</th><th class="r">Lương cứng</th></tr>' + L.map(function(o){ return '<tr><td><b style="color:' + c.mau + ';">' + esc(o.l) + '</b></td><td class="r">' + tien(o.thr) + '</td><td class="r"><b>' + tien(o.sal) + '</b></td></tr>'; }).join('') + '</table><div class="sub" style="font-size:11.5px;margin-top:3px;">Theo cài đặt cách tính KPI. Chỉ tiêu từng tháng có thể được điều chỉnh, xem ở mục KPI.</div>'; }
+function ladAuto(){ if(!LADF[NS.cap]) return; var r = rung(NS.cap, kpiIn()); NS.luong = r.re ? r.re.sal / 1e6 : 0; }
+function ladHint(){ if(!LADF[NS.cap]) return ''; var k = kpiIn(), r = rung(NS.cap, k), lb = NS.cap === 'nv' ? 'Phí net cơ sở ' : 'KPI phòng '; if(!r.L.length) return ''; return '<div class="lhint">' + lb + tien(k * 1e6) + (r.re ? ' đạt cấp <b>' + esc(r.re.l) + '</b> → lương cứng <b>' + tien(r.re.sal) + ' đ</b>' : ' chưa đạt mốc <b>' + esc(r.L[0].l) + '</b> (' + tien(r.L[0].thr) + ')') + (r.nx ? ' · còn thiếu <b>' + tien(r.nx.thr - k * 1e6) + '</b> để lên ' + esc(r.nx.l) + ' (' + tien(r.nx.sal) + ')' : ' · đã ở mức cao nhất') + '. Lương tự điền theo bậc, sửa tay được.</div>'; }
 function nsRes(){
   var c = capOf(NS.cap), R = [['Lương cứng', NS.luong, c.id === 'ctv' ? 'CTV không có lương cứng' : ''], ['Hoa hồng cơ sở', NS.cs * c.cs / 100, pc(c.cs) + ' × ' + sv(NS.cs) + ' triệu phí net'], ['Hoa hồng phái sinh', NS.ps * c.ps / 100, pc(c.ps) + ' × ' + sv(NS.ps) + ' triệu phí net']];
   c.ql.forEach(function(q, i){ var v = i ? NS.duoi : NS.ph; R.push(['Phí quản lý ' + pc(q[0]), v * q[0] / 100, pc(q[0]) + ' × ' + sv(v) + ' triệu ' + q[1]]); });
   var tong = R.reduce(function(a, r){ return a + r[1]; }, 0), mx = Math.max.apply(null, R.map(function(r){ return r[1]; })) || 1;
-  return R.map(function(r){ return '<div class="row"><div class="g">' + r[0] + '<small>' + r[2] + '</small></div><div class="bar"><i style="width:' + Math.max(r[1] ? 3 : 0, r[1] / mx * 100) + '%;background:' + c.mau + ';opacity:.55;"></i></div><div class="m">' + tien(r[1] * 1e6) + ' đ</div></div>'; }).join('') + '<div class="row best" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;"><div class="g">Tổng tạm tính</div><div></div><div class="m" style="font-size:17px;">' + tien(tong * 1e6) + ' đ</div></div>';
+  return ladHint() + R.map(function(r){ return '<div class="row"><div class="g">' + r[0] + '<small>' + r[2] + '</small></div><div class="bar"><i style="width:' + Math.max(r[1] ? 3 : 0, r[1] / mx * 100) + '%;background:' + c.mau + ';opacity:.55;"></i></div><div class="m">' + tien(r[1] * 1e6) + ' đ</div></div>'; }).join('') + '<div class="row best" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;"><div class="g">Tổng tạm tính</div><div></div><div class="m" style="font-size:17px;">' + tien(tong * 1e6) + ' đ</div></div>';
 }
 function capCard(c){
   return '<div class="panel cap" style="border-top:4px solid ' + c.mau + ';"><div class="ch"><span class="cn" style="color:' + c.mau + ';">' + c.ten + '</span>' + (c.bac ? '<span class="tag" style="background:' + c.nen + ';color:' + c.mau + ';">' + c.bac + '</span>' : '') + '<button class="lk" data-ce="' + c.id + '" style="margin-left:auto;">Sửa</button></div>' +
-    '<div class="cl">Lương cứng</div><div class="cv">' + esc(c.luong) + '</div>' + (c.moc ? '<table class="t" style="margin-top:4px;"><tr><th>Lương</th><th class="r">KPI phí net cơ sở</th></tr>' + c.moc.map(function(m){ return '<tr><td><b>' + sv(m[0]) + ' triệu</b></td><td class="r">' + sv(m[1]) + ' triệu</td></tr>'; }).join('') + '</table>' : '') +
+    '<div class="cl">Lương cứng</div><div class="cv">' + esc(c.luong) + '</div>' + ladH(c) + (c.moc && !lad(c.id).length ? '<table class="t" style="margin-top:4px;"><tr><th>Lương</th><th class="r">KPI phí net cơ sở</th></tr>' + c.moc.map(function(m){ return '<tr><td><b>' + sv(m[0]) + ' triệu</b></td><td class="r">' + sv(m[1]) + ' triệu</td></tr>'; }).join('') + '</table>' : '') +
     '<div class="cl">Hoa hồng cá nhân</div><div class="c2"><div><b style="color:' + c.mau + ';">' + pc(c.cs) + '</b><span>phí net cơ sở</span></div><div><b style="color:' + c.mau + ';">' + pc(c.ps) + '</b><span>phí net phái sinh</span></div></div>' +
     '<div class="cl">Phí quản lý</div>' + (c.ql.length ? c.ql.map(function(q){ return '<div class="cq"><b style="color:' + c.mau + ';">' + pc(q[0]) + '</b> × ' + esc(q[1]) + '</div>'; }).join('') : '<div class="cq" style="color:var(--muted);">Không có</div>') +
     '<div class="cl">Hoa hồng dư nợ</div><div class="cq">' + (c.dn ? 'Có' : '<span style="color:var(--muted);">Không áp dụng</span>') + '</div>' + (c.gc ? '<div class="sub" style="margin-top:8px;">' + esc(c.gc) + '</div>' : '') + '</div>';
@@ -7362,11 +7373,11 @@ box.addEventListener('click', function(e){
   else if(t.id === 'tOk'){ if(!gv('tK').trim() || !gv('tM').trim()){ $i('eErr').textContent = 'Cần nhập tên khoản và mức.'; return; } var o = TE.i == null ? {} : THUE[TE.nh][TE.i]; o.k = gv('tK').trim(); o.m = gv('tM').trim(); o.g = gv('tG').trim(); var nw = TE.i == null; if(nw){ o.n = 'Tự nhập ' + hom(); THUE[TE.nh].push(o); } closeM(); draw(); save(['thue'], (nw ? 'Thêm khoản ' : 'Sửa khoản ') + o.k); }
   else if(t.id === 'tDel'){ var nt = THUE[TE.nh][TE.i].k; THUE[TE.nh].splice(TE.i, 1); closeM(); draw(); save(['thue'], 'Xóa khoản ' + nt); }
 });
-box.addEventListener('change', function(e){ if(e.target.id === 'nCap'){ NS.cap = e.target.value; NS.luong = capOf(NS.cap).l0; draw(); return; } if(BUSY || !ED) return; if(e.target.id === 'eLoai' || e.target.id === 'eCot'){ edRead(); edDraw(); } });
+box.addEventListener('change', function(e){ if(e.target.id === 'nCap'){ NS.cap = e.target.value; NS.luong = capOf(NS.cap).l0; ladAuto(); draw(); return; } if(BUSY || !ED) return; if(e.target.id === 'eLoai' || e.target.id === 'eCot'){ edRead(); edDraw(); } });
 box.addEventListener('input', function(e){
   var n = parseFloat(String(e.target.value).replace(/\./g, '').replace(',', '.'));
   if(e.target.id === 'iNo' || e.target.id === 'iNg'){ if(n > 0){ IN[e.target.id === 'iNo' ? 'no' : 'ngay'] = n; $i('res').innerHTML = calcHtml(); } }
-  var nk = {nCs:'cs', nPs:'ps', nLuong:'luong', nPh:'ph', nDuoi:'duoi'}[e.target.id]; if(nk){ var m = nv(e.target.value); NS[nk] = m == null || m < 0 ? 0 : m; $i('nsRes').innerHTML = nsRes(); return; }
+  var nk = {nCs:'cs', nPs:'ps', nLuong:'luong', nPh:'ph', nDuoi:'duoi'}[e.target.id]; if(nk){ var m = nv(e.target.value); NS[nk] = m == null || m < 0 ? 0 : m; if((nk === 'ph' || (nk === 'cs' && NS.cap === 'nv')) && LADF[NS.cap]){ ladAuto(); var li = $i('nLuong'); if(li) li.value = sv(NS.luong); } $i('nsRes').innerHTML = nsRes(); return; }
   if(e.target.id === 'qGia' || e.target.id === 'qSo'){ if(n > 0){ TP[e.target.id === 'qGia' ? 'gia' : 'so'] = n; $i('tpRes').innerHTML = tpHtml(); } }
   if(e.target.id === 'pGia' || e.target.id === 'pSo'){ if(n > 0){ PS[e.target.id === 'pGia' ? 'gia' : 'so'] = n; $i('psRes').innerHTML = psHtml(); } }
 });
