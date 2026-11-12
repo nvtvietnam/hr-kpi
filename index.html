@@ -1246,6 +1246,14 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;}
 .lh-sum .btn{font-size:12.5px;padding:6px 12px;}
 .lh-sum span{font-size:12px;color:#B45309;}
 .lh-card.past{opacity:1 !important;} .lh-card.past .lh-time,.lh-card.past .lh-title,.lh-card.past .lh-meta,.lh-card.past .lh-body,.lh-card.past .lh-req{opacity:.72;}
+
+/* Lịch họp: mời theo chức danh (v3.123) */
+.lh-capg{display:flex;gap:6px;flex-wrap:wrap;}
+.lh-cap{border:1.5px dashed #B7AED6;background:#fff;border-radius:999px;padding:6px 12px;font:600 12.5px Inter,sans-serif;color:var(--accent-dark);cursor:pointer;}
+.lh-cap span{color:var(--text-muted);font-weight:500;}
+.lh-cap.on{border-style:solid;border-color:var(--accent);background:var(--accent-soft);}
+.lh-cap:disabled{opacity:.45;cursor:not-allowed;}
+.me-f.me-lock{background:#F3F1F8 !important;color:#6B6A8A;cursor:not-allowed;border-style:dashed;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -5168,28 +5176,30 @@ showView('view-lookup-login');
     function cur(){ return M || A; }
     function edModal(){
       var E = M && M.ed; if(!E) return '';
-      var inp = function(k, lb, ph, type){ return '<label style="font-size:12px;color:var(--text-muted);display:block;">' + lb + '<br><input class="input me-f" data-f="' + k + '" type="' + (type || 'text') + '" value="' + esc(E.rec && E.rec[k] != null ? String(E.rec[k]).slice(0, type === 'date' ? 10 : 200) : '') + '" placeholder="' + (ph || '') + '" style="width:100%;margin-top:3px;"></label>'; };
-      var r = E.rec;
+      var has = function(k){ return E.rec && E.rec[k] != null && String(E.rec[k]).trim() !== ''; };
+      var inp = function(k, lb, ph, type){ var lk = has(k); return '<label style="font-size:12px;color:var(--text-muted);display:block;">' + lb + (lk ? ' <span title="Đã có dữ liệu, chỉ Admin sửa được">🔒</span>' : ' <span style="color:#047857;font-weight:600;">· còn trống</span>') + '<br><input class="input me-f' + (lk ? ' me-lock' : '') + '" data-f="' + k + '" type="' + (type || 'text') + '" value="' + esc(lk ? String(E.rec[k]).slice(0, type === 'date' ? 10 : 200) : '') + '" placeholder="' + (lk ? '' : (ph || 'Bổ sung')) + '"' + (lk ? ' readonly tabindex="-1"' : '') + ' style="width:100%;margin-top:3px;"></label>'; };
+      var r = E.rec, nEmpty = r ? ['ho_ten', 'ma_nhan_su', 'sdt', 'email', 'ngay_vao', 'ma_nguoi_gioi_thieu', 'ghi_chu'].filter(function(k){ return !has(k); }).length : 0;
       var body = !r ? '<div style="padding:18px 0;color:var(--text-muted);">' + (E.err ? '' : 'Đang tải...') + '</div>' :
         '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:12px;">ID <b>' + esc(r.ma_nv) + '</b> · ' + esc((r.phong || '').replace(/^PHÒNG TVĐT /, '')) + ' · cấp <b>' + esc(r.cap || '') + '</b> · ' + esc(r.trang_thai || '') + ' <span style="opacity:.8;">(cấp, phòng, trạng thái do quản trị viên đổi)</span></div>' +
+        '<div class="callout" style="margin-bottom:12px;background:#ECFDF5;border-color:#A7F3D0;"><div>ℹ️</div><div>Bạn chỉ <b>bổ sung được ô còn trống</b>. Ô đã có dữ liệu (🔒) muốn sửa thì báo Admin.' + (nEmpty ? '' : ' <b>Người này đã đủ thông tin.</b>') + '</div></div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;">' + inp('ho_ten', 'Họ tên') + inp('ma_nhan_su', 'Mã nhân sự') + inp('sdt', 'Số điện thoại') + inp('email', 'Email', '', 'email') + inp('ngay_vao', 'Ngày vào', '', 'date') + inp('ma_nguoi_gioi_thieu', 'Mã người giới thiệu') + '</div>' +
-        '<label style="font-size:12px;color:var(--text-muted);display:block;margin-top:10px;">Ghi chú<br><textarea class="input me-f" data-f="ghi_chu" rows="3" style="width:100%;margin-top:3px;">' + esc(r.ghi_chu || '') + '</textarea></label>';
+        '<label style="font-size:12px;color:var(--text-muted);display:block;margin-top:10px;">Ghi chú' + (has('ghi_chu') ? ' 🔒' : ' <span style="color:#047857;font-weight:600;">· còn trống</span>') + '<br><textarea class="input me-f' + (has('ghi_chu') ? ' me-lock' : '') + '" data-f="ghi_chu" rows="3"' + (has('ghi_chu') ? ' readonly tabindex="-1"' : ' placeholder="Bổ sung"') + ' style="width:100%;margin-top:3px;">' + esc(r.ghi_chu || '') + '</textarea></label>';
       return '<div class="me-ov" id="meOv"><div class="me-md"><div style="display:flex;align-items:center;margin-bottom:10px;"><div style="font-size:16px;font-weight:800;flex:1;">' + esc((r && r.ho_ten) || E.name || 'Nhân sự') + '</div><button class="btn btn-secondary" id="meCancel" style="height:30px;padding:0 12px;">Đóng</button></div>' +
         (E.err ? '<div class="callout" style="margin-bottom:10px;"><div>⚠️</div><div>' + esc(E.err) + '</div></div>' : '') + body +
-        (r ? '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary" id="meCancel2">Hủy</button><button class="btn btn-primary" id="meSave"' + (E.busy ? ' disabled' : '') + '>' + (E.busy ? 'Đang lưu...' : 'Lưu thay đổi') + '</button></div>' : '') + '</div></div>';
+        (r ? '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary" id="meCancel2">Hủy</button><button class="btn btn-primary" id="meSave"' + (E.busy || !nEmpty ? ' disabled' : '') + '>' + (E.busy ? 'Đang lưu...' : 'Lưu bổ sung') + '</button></div>' : '') + '</div></div>';
     }
     /* --- TP/GĐ thêm CTV mới vào phòng trong phạm vi --- */
     function addModal(){
       var F = M && M.add; if(!F) return '';
-      var v = F.val, phs = ((M.scope && M.scope.phong) || []).filter(function(p){ return p.id != null; });
+      var v = F.val, RQ = ' <b style="color:#B91C1C;">*</b>', phs = ((M.scope && M.scope.phong) || []).filter(function(p){ return p.id != null; });
       var inp = function(k, lb, ph, type){ return '<label style="font-size:12px;color:var(--text-muted);display:block;">' + lb + '<br><input class="input ma-f" data-f="' + k + '" type="' + (type || 'text') + '" value="' + esc(v[k] || '') + '" placeholder="' + (ph || '') + '" style="width:100%;margin-top:3px;"></label>'; };
       return '<div class="me-ov" id="maOv"><div class="me-md"><div style="display:flex;align-items:center;margin-bottom:6px;"><div style="font-size:16px;font-weight:800;flex:1;">Thêm CTV mới</div><button class="btn btn-secondary" id="maCancel" style="height:30px;padding:0 12px;">Đóng</button></div>' +
-        '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:12px;">Người mới được thêm ở cấp <b>CTV</b>. Lên cấp, đổi phòng hay cho nghỉ do quản trị viên xử lý.</div>' +
+        '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:12px;">Người mới được thêm ở cấp <b>CTV</b>. Cần điền đủ các ô có dấu <b style="color:#B91C1C;">*</b>. Lên cấp, đổi phòng hay cho nghỉ do quản trị viên xử lý.</div>' +
         (F.err ? '<div class="callout" style="margin-bottom:10px;"><div>⚠️</div><div>' + esc(F.err) + '</div></div>' : '') +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;">' + inp('ma_nv', 'ID môi giới <b style="color:#B91C1C;">*</b>', 'VD: BM09') + inp('ho_ten', 'Họ tên <b style="color:#B91C1C;">*</b>') +
-        '<label style="font-size:12px;color:var(--text-muted);display:block;">Phòng<br><select class="select ma-f" data-f="phong_id" style="width:100%;margin-top:3px;">' + phs.map(function(p){ return '<option value="' + p.id + '"' + (String(v.phong_id) === String(p.id) ? ' selected' : '') + '>' + esc(String(p.ten || '').replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select></label>' +
-        inp('ngay_vao', 'Ngày vào', '', 'date') + inp('sdt', 'Số điện thoại') + inp('email', 'Email', '', 'email') + inp('ma_nguoi_gioi_thieu', 'Mã người giới thiệu', 'ID người giới thiệu (nếu có)') + '</div>' +
-        '<label style="font-size:12px;color:var(--text-muted);display:block;margin-top:10px;">Ghi chú<br><textarea class="input ma-f" data-f="ghi_chu" rows="2" style="width:100%;margin-top:3px;">' + esc(v.ghi_chu || '') + '</textarea></label>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;">' + inp('ma_nv', 'ID môi giới' + RQ, 'VD: BM09') + inp('ho_ten', 'Họ tên' + RQ) +
+        '<label style="font-size:12px;color:var(--text-muted);display:block;">Phòng' + RQ + '<br><select class="select ma-f" data-f="phong_id" style="width:100%;margin-top:3px;">' + phs.map(function(p){ return '<option value="' + p.id + '"' + (String(v.phong_id) === String(p.id) ? ' selected' : '') + '>' + esc(String(p.ten || '').replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select></label>' +
+        inp('ngay_vao', 'Ngày vào' + RQ, '', 'date') + inp('sdt', 'Số điện thoại' + RQ, 'VD: 0912345678', 'tel') + inp('email', 'Email' + RQ, 'VD: ten@gmail.com', 'email') + inp('ma_nguoi_gioi_thieu', 'Mã người giới thiệu' + RQ, 'ID người giới thiệu') + '</div>' +
+        '<label style="font-size:12px;color:var(--text-muted);display:block;margin-top:10px;">Ghi chú (không bắt buộc)<br><textarea class="input ma-f" data-f="ghi_chu" rows="2" style="width:100%;margin-top:3px;">' + esc(v.ghi_chu || '') + '</textarea></label>' +
         '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary" id="maCancel2">Hủy</button><button class="btn btn-primary" id="maSave"' + (F.busy ? ' disabled' : '') + '>' + (F.busy ? 'Đang thêm...' : 'Thêm CTV') + '</button></div></div></div>';
     }
     function addOpen(){
@@ -5204,11 +5214,17 @@ showView('view-lookup-login');
       var v = F.val; v.ma_nv = String(v.ma_nv || '').replace(/\s/g, '').toUpperCase();
       if(!v.ma_nv){ F.err = 'Hãy nhập ID môi giới.'; draw('semp'); return; }
       if(!String(v.ho_ten || '').trim()){ F.err = 'Hãy nhập họ tên.'; draw('semp'); return; }
+      var miss = [], sdt = String(v.sdt || '').replace(/\D/g, '');
+      if(!v.phong_id) miss.push('phòng'); if(!v.ngay_vao) miss.push('ngày vào'); if(!sdt) miss.push('số điện thoại'); if(!String(v.email || '').trim()) miss.push('email'); if(!String(v.ma_nguoi_gioi_thieu || '').trim()) miss.push('mã người giới thiệu');
+      if(miss.length){ F.err = 'Hãy điền đủ: ' + miss.join(', ') + '.'; draw('semp'); return; }
+      if(!/^\d{9,11}$/.test(sdt)){ F.err = 'Số điện thoại phải gồm 9–11 chữ số.'; draw('semp'); return; }
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v.email).trim())){ F.err = 'Email chưa đúng dạng (VD: ten@gmail.com).'; draw('semp'); return; }
+      v.ma_nguoi_gioi_thieu = String(v.ma_nguoi_gioi_thieu).trim().toUpperCase();
       F.busy = true; F.err = ''; draw('semp');
       try {
         var a = LIVE.memArgs(), r = await SBC.rpc('hr_nv_them', {p_ma:a.ma || null, p_pin:a.pin || null, p_val:v});
         if(r.error) throw r.error;
-        if(!r.data || !r.data.ok){ var l = r.data && r.data.loi; F.err = l === 'trung_ma' ? 'ID ' + v.ma_nv + ' đã có trong danh sách nhân sự.' : l === 'ma_sai' ? 'ID chỉ gồm chữ, số (2–20 ký tự), không dấu cách.' : l === 'thieu_ho_ten' ? 'Hãy nhập họ tên.' : l === 'ngoai_pham_vi' ? 'Phòng này không thuộc phạm vi của bạn.' : l === 'ngay_vao_sai' ? 'Ngày vào không hợp lệ.' : l === 'khong_co_quyen' ? 'Chỉ Trưởng phòng hoặc Giám đốc được thêm CTV.' : 'Không thêm được, hãy đăng nhập lại.'; F.busy = false; draw('semp'); return; }
+        if(!r.data || !r.data.ok){ var l = r.data && r.data.loi; F.err = l === 'trung_ma' ? 'ID ' + v.ma_nv + ' đã có trong danh sách nhân sự.' : l === 'ma_sai' ? 'ID chỉ gồm chữ, số (2–20 ký tự), không dấu cách.' : l === 'thieu_ho_ten' ? 'Hãy nhập họ tên.' : l === 'ngoai_pham_vi' ? 'Phòng này không thuộc phạm vi của bạn.' : l === 'ngay_vao_sai' ? 'Ngày vào không hợp lệ.' : l === 'thieu_ngay_vao' ? 'Hãy chọn ngày vào.' : l === 'sdt_sai' ? 'Số điện thoại phải gồm 9–11 chữ số.' : l === 'email_sai' ? 'Email chưa đúng dạng.' : l === 'thieu_gioi_thieu' ? 'Hãy nhập mã người giới thiệu.' : l === 'gioi_thieu_khong_co' ? 'Mã người giới thiệu ' + v.ma_nguoi_gioi_thieu + ' không có trong danh sách nhân sự.' : l === 'khong_co_quyen' ? 'Chỉ Trưởng phòng hoặc Giám đốc được thêm CTV.' : 'Không thêm được, hãy đăng nhập lại.'; F.busy = false; draw('semp'); return; }
         M.add = null; M.q = ''; if(typeof toast === 'function') toast('Đã thêm CTV ' + v.ho_ten + ' (' + r.data.ma_nv + ')' + (r.data.so_lieu ? ' · đã chuyển ' + r.data.so_lieu + ' ngày số liệu' : ''));
         M.loading = true; draw('semp'); await loadScope(); M.loading = false; M.hl = r.data.ma_nv; draw('semp');
       } catch(e){ F.err = (e && e.code === 'PGRST202') ? 'Máy chủ chưa bật chức năng thêm CTV (cần chạy file tp_them_ctv.sql).' : dbErr(e); F.busy = false; draw('semp'); }
@@ -5227,15 +5243,17 @@ showView('view-lookup-login');
     }
     async function edSave(){
       var E = M.ed; if(!E || !E.rec || E.busy) return;
-      var val = {}; document.querySelectorAll('#sempContent .me-f').forEach(function(i){ val[i.getAttribute('data-f')] = i.value; });
-      if(!String(val.ho_ten || '').trim()){ E.err = 'Họ tên không được để trống.'; draw('semp'); return; }
+      var val = {}; document.querySelectorAll('#sempContent .me-f:not(.me-lock)').forEach(function(i){ var f = i.getAttribute('data-f'); if(f && String(i.value).trim()) val[f] = i.value; });
+      if(!Object.keys(val).length){ E.err = 'Bạn chưa điền thêm ô nào còn trống.'; draw('semp'); return; }
+      if(val.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(val.email).trim())){ E.err = 'Email chưa đúng dạng.'; draw('semp'); return; }
+      if(val.sdt && !/^\d{9,11}$/.test(String(val.sdt).replace(/\D/g, ''))){ E.err = 'Số điện thoại phải gồm 9–11 chữ số.'; draw('semp'); return; }
       E.busy = true; E.err = ''; draw('semp');
       try {
         var a = LIVE.memArgs(), r = await SBC.rpc('hr_nv_sua', {p_ma:a.ma || null, p_pin:a.pin || null, p_nv:E.ma, p_val:val});
         if(r.error) throw r.error;
         if(!r.data || !r.data.ok){ var l = r.data && r.data.loi; E.err = l === 'trung_ma' ? 'Mã nhân sự này đã có người dùng.' : l === 'ngay_vao_sai' ? 'Ngày vào không hợp lệ.' : l === 'thieu_ho_ten' ? 'Họ tên không được để trống.' : l === 'ngoai_pham_vi' ? 'Người này không thuộc phạm vi của bạn.' : 'Không lưu được, hãy đăng nhập lại.'; E.busy = false; draw('semp'); return; }
-        ((M.scope && M.scope.nguoi) || []).forEach(function(n){ if(n.ma_nv === E.ma){ n.ho_ten = String(val.ho_ten).trim(); n.ma_nhan_su = String(val.ma_nhan_su || '').trim() || null; n.gioi_thieu = String(val.ma_nguoi_gioi_thieu || '').trim().toUpperCase() || null; n.ten_gt = null; } });
-        M.ed = null; if(typeof toast === 'function') toast('Đã lưu thông tin nhân sự'); draw('semp');
+        ((M.scope && M.scope.nguoi) || []).forEach(function(n){ if(n.ma_nv === E.ma){ if(!n.ho_ten && val.ho_ten) n.ho_ten = String(val.ho_ten).trim(); if(!n.ma_nhan_su && val.ma_nhan_su) n.ma_nhan_su = String(val.ma_nhan_su).trim().toUpperCase(); if(!n.gioi_thieu && val.ma_nguoi_gioi_thieu){ n.gioi_thieu = String(val.ma_nguoi_gioi_thieu).trim().toUpperCase(); n.ten_gt = null; } } });
+        M.ed = null; if(typeof toast === 'function') toast('Đã bổ sung thông tin'); draw('semp');
       } catch(e){ E.err = (e && e.code === 'PGRST202') ? 'Chưa chạy file nhan_su_truong_phong.sql trên Supabase' : dbErr(e); E.busy = false; draw('semp'); }
     }
     LIVE.dashRedraw = function(){ draw('sdash'); };
@@ -5275,7 +5293,7 @@ showView('view-lookup-login');
         el.innerHTML = h;
       } else if(page === 'semp'){
         if(LIVE.nhomEnsure) LIVE.nhomEnsure(function(){ draw('semp'); });
-        var hh = head('Nhân sự', M.scope && (M.scope.vai === 'TP' || M.scope.vai === 'GD') ? 'Danh sách người trong phạm vi của bạn. Bạn sửa được thông tin và thêm CTV mới.' : 'Danh sách người trong phạm vi của bạn (chỉ xem).');
+        var hh = head('Nhân sự', M.scope && (M.scope.vai === 'TP' || M.scope.vai === 'GD') ? 'Danh sách người trong phạm vi của bạn. Bạn thêm được CTV mới và bổ sung thông tin còn thiếu.' : 'Danh sách người trong phạm vi của bạn (chỉ xem).');
         if(M.loading && !M.scope) return void (el.innerHTML = hh + '<div style="padding:24px;color:var(--text-muted);">Đang tải...</div>');
         if(M.setup === false) return void (el.innerHTML = hh + holderMsg('Chưa bật phân quyền theo cấp. Chạy file <b>kpi_phan_quyen.sql</b> trong Supabase SQL Editor.'));
         if(M.err) return void (el.innerHTML = hh + holderMsg('⚠️ ' + esc(M.err)));
@@ -5285,10 +5303,14 @@ showView('view-lookup-login');
         var sk = (M.sort && M.sort.k) || '', sd = (M.sort && M.sort.d) || 1;
         if(sk) rows = rows.slice().sort(function(a, b){ var x = String(a[sk] == null ? '' : a[sk]), y = String(b[sk] == null ? '' : b[sk]); if(!x && y) return 1; if(x && !y) return -1; return sd * x.localeCompare(y, 'vi', {numeric:true}); });
         var thS = function(k, lb){ return '<th class="me-sort" data-k="' + k + '" style="cursor:pointer;white-space:nowrap;">' + lb + (sk === k ? (sd > 0 ? ' ▲' : ' ▼') : ' <span style="opacity:.35;">⇅</span>') + '</th>'; };
-        hh += '<div class="panel"><div class="panel-head" style="padding:14px 18px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhân sự (' + rows.length + ')' + (canEd ? ' <span style="font-weight:400;font-size:12.5px;color:var(--text-muted);">· bấm vào một người để xem và sửa thông tin</span>' : '') + '</div>' + (canEd ? '<button class="btn btn-primary" id="meAdd">＋ Thêm CTV</button>' : '') + LIVE.grpSelect('meG', M.grp) + (Object.keys(phs).length > 1 ? '<select class="select" id="meP"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === M.ph ? ' selected' : '') + '>' + esc(p.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + (ng2.length > 8 ? '<input class="input" id="meQ" placeholder="Tìm tên hoặc ID" value="' + esc(M.q || '') + '">' : '') + '</div><div class="panel-body me-wrap"><table class="me-tbl"><thead><tr><th>#</th>' + thS('ho_ten', 'Tên') + thS('ma_nv', 'ID') + thS('ma_nhan_su', 'Mã nhân sự') + thS('phong', 'Phòng') + thS('cap', 'Cấp') + (canEd ? thS('gioi_thieu', 'Người giới thiệu') : '') + '</tr></thead><tbody>' +
-          (rows.length ? rows.slice(0, 400).map(function(x, i){ return '<tr' + (canEd ? ' class="me-row" data-m="' + esc(x.ma_nv) + '" style="cursor:pointer;' + (x.ma_nv === M.ma || x.ma_nv === M.hl ? 'background:var(--accent-soft);' : '') + '"' : (x.ma_nv === M.ma ? ' style="background:var(--accent-soft);"' : '')) + '><td style="color:var(--text-muted);">' + (i + 1) + '</td><td style="white-space:nowrap;">' + esc(x.ho_ten) + (x.ma_nv === M.ma ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + '</td><td>' + esc(x.ma_nv) + '</td><td>' + esc(x.ma_nhan_su || '') + '</td><td style="white-space:nowrap;">' + esc((x.phong || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(x.cap) + '</td>' + (canEd ? '<td style="white-space:nowrap;">' + (x.gioi_thieu ? esc(x.gioi_thieu) + (x.ten_gt ? ' <span style="color:var(--text-muted);">· ' + esc(x.ten_gt) + '</span>' : '') : '<span style="color:var(--text-muted);">—</span>') + '</td>' : '') + '</tr>'; }).join('') : '<tr><td colspan="7" style="padding:16px;color:var(--text-muted);">Không có ai.</td></tr>') + '</tbody></table></div><div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);">' + scopeText() + (canEd ? ' Bạn thêm được CTV mới vào phòng mình; lên cấp, đổi phòng và trạng thái do quản trị viên xử lý.' : ' Việc thêm người hoặc đổi phòng do quản trị viên xử lý.') + '</div></div>' + edModal() + addModal();
+        hh += '<div class="panel"><div class="panel-head" style="padding:14px 18px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhân sự (' + rows.length + ')' + (canEd ? ' <span style="font-weight:400;font-size:12.5px;color:var(--text-muted);">· bấm ＋ Bổ sung để điền thông tin còn thiếu</span>' : '') + '</div>' + (canEd ? '<button class="btn btn-primary" id="meAdd">＋ Thêm CTV</button>' : '') + LIVE.grpSelect('meG', M.grp) + (Object.keys(phs).length > 1 ? '<select class="select" id="meP"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === M.ph ? ' selected' : '') + '>' + esc(p.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + (ng2.length > 8 ? '<input class="input" id="meQ" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Tìm tên hoặc ID" value="' + esc(M.q || '') + '">' : '') + '</div><div class="panel-body me-wrap"><table class="me-tbl"><thead><tr><th>#</th>' + thS('ho_ten', 'Tên') + thS('ma_nv', 'ID') + thS('ma_nhan_su', 'Mã nhân sự') + thS('phong', 'Phòng') + thS('cap', 'Cấp') + (canEd ? thS('gioi_thieu', 'Người giới thiệu') + '<th></th>' : '') + '</tr></thead><tbody>' +
+          (rows.length ? rows.slice(0, 400).map(function(x, i){ return '<tr' + (canEd ? ' class="me-row" data-m="' + esc(x.ma_nv) + '" style="cursor:pointer;' + (x.ma_nv === M.ma || x.ma_nv === M.hl ? 'background:var(--accent-soft);' : '') + '"' : (x.ma_nv === M.ma ? ' style="background:var(--accent-soft);"' : '')) + '><td style="color:var(--text-muted);">' + (i + 1) + '</td><td style="white-space:nowrap;">' + esc(x.ho_ten) + (x.ma_nv === M.ma ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + '</td><td>' + esc(x.ma_nv) + '</td><td>' + esc(x.ma_nhan_su || '') + '</td><td style="white-space:nowrap;">' + esc((x.phong || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(x.cap) + '</td>' + (canEd ? '<td style="white-space:nowrap;">' + (x.gioi_thieu ? esc(x.gioi_thieu) + (x.ten_gt ? ' <span style="color:var(--text-muted);">· ' + esc(x.ten_gt) + '</span>' : '') : '<span style="color:var(--text-muted);">—</span>') + '</td><td style="text-align:right;"><button class="btn btn-secondary me-edbtn" style="padding:4px 12px;font-size:12px;">＋ Bổ sung</button></td>' : '') + '</tr>'; }).join('') : '<tr><td colspan="7" style="padding:16px;color:var(--text-muted);">Không có ai.</td></tr>') + '</tbody></table></div><div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);">' + scopeText() + (canEd ? ' Bạn thêm được CTV mới vào phòng mình và bổ sung ô còn trống; sửa dữ liệu đã có, lên cấp, đổi phòng, trạng thái do quản trị viên xử lý.' : ' Việc thêm người hoặc đổi phòng do quản trị viên xử lý.') + '</div></div>' + edModal() + addModal();
+        var oq = document.getElementById('meQ'), keepQ = oq && document.activeElement === oq;
+        if(keepQ) oq.parentNode.removeChild(oq);
         el.innerHTML = hh;
-        var qi = document.getElementById('meQ'); if(qi && M.qf){ qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+        var nq = document.getElementById('meQ');
+        if(keepQ && nq){ nq.parentNode.replaceChild(oq, nq); oq.focus(); }
+        else if(nq && M.qf){ nq.focus(); try { nq.setSelectionRange(nq.value.length, nq.value.length); } catch(x){} }
       } else if(page === 'sloan' && LIVE.loanDraw){ LIVE.loanDraw();
       } else if(page === 'scall' && LIVE.callDraw){ LIVE.callDraw();
       } else if(page === 'cn' && LIVE.cnDraw){ LIVE.cnDraw();
@@ -5354,8 +5376,10 @@ showView('view-lookup-login');
     }
     Object.keys(C).forEach(function(p){
       C[p].addEventListener('click', function(ev){ var mt = ev.target.closest('.lg-mtab'); if(mt && M && p === 'sluong'){ M.lgTab = mt.getAttribute('data-t'); draw('sluong'); return; } var br = ev.target.closest('.lg-bar'); if(br && M && p === 'sluong') loadLuong(br.getAttribute('data-k')); });
-      C[p].addEventListener('input', function(ev){ if(ev.target.id === 'meQ'){ M.q = ev.target.value; M.qf = true; draw('semp'); } });
-      C[p].addEventListener('change', function(ev){ if(!M) return; M.qf = false; if(ev.target.id === 'meP'){ M.ph = ev.target.value; draw('semp'); } else if(ev.target.id === 'meG'){ M.grp = ev.target.value; draw('semp'); } else if(ev.target.id === 'meKy') loadLuong(ev.target.value); });
+      var qT = null;
+      C[p].addEventListener('input', function(ev){ if(ev.target.id === 'meQ'){ M.q = ev.target.value; M.qf = true; if(ev.isComposing) return; clearTimeout(qT); qT = setTimeout(function(){ draw('semp'); }, 180); } });
+      C[p].addEventListener('compositionend', function(ev){ if(ev.target.id === 'meQ'){ M.q = ev.target.value; clearTimeout(qT); qT = setTimeout(function(){ draw('semp'); }, 120); } });
+      C[p].addEventListener('change', function(ev){ if(!M) return; if(ev.target.id !== 'meQ') M.qf = false; if(ev.target.id === 'meP'){ M.ph = ev.target.value; draw('semp'); } else if(ev.target.id === 'meG'){ M.grp = ev.target.value; draw('semp'); } else if(ev.target.id === 'meKy') loadLuong(ev.target.value); });
       C[p].addEventListener('click', function(ev){
         if(p !== 'semp' || !M) return;
         var t = ev.target, so = t.closest('.me-sort'); if(so){ var kk = so.getAttribute('data-k'); M.sort = (M.sort && M.sort.k === kk) ? {k:kk, d:-M.sort.d} : {k:kk, d:1}; draw('semp'); return; }
@@ -5836,7 +5860,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.122';
+  var V = 'v3.125';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -6514,6 +6538,13 @@ showView('view-lookup-login');
       (r.noi_dung ? '<div class="lh-body" style="margin-bottom:10px;">' + linkify(r.noi_dung) + '</div>' : '') + (r.yeu_cau ? '<div class="lh-req"><b>Yêu cầu khi tham gia:</b> ' + linkify(r.yeu_cau) + '</div>' : '') +
       (LIVE.tbHop ? LIVE.tbHop(r) : '') + (L.can ? '<div style="margin-top:14px;text-align:right;"><button class="btn btn-primary lh-edit" data-id="' + r.id + '">Sửa</button></div>' : '') + '</div></div>';
   }
+  var CAPG = [['GD', 'Giám đốc', /^GĐ/], ['TP', 'Trưởng phòng', /^TP/], ['NV', 'Nhân viên', /^CV/], ['CTV', 'CTV', /^(CTV|Chưa xếp)$/]];
+  function capList(g){ var re = CAPG.filter(function(x){ return x[0] === g; })[0][2]; return (L.people || []).filter(function(p){ return re.test(String(p.cap || '')); }).map(function(p){ return String(p.ma).toUpperCase(); }); }
+  function capChips(f){
+    if(!L.people) return '';
+    var have = {}; (f.moi_nguoi || []).forEach(function(m){ have[String(m).toUpperCase()] = 1; });
+    return '<div style="font-size:12px;color:var(--text-muted);margin:8px 0 4px;">Theo chức danh (toàn công ty)</div><div class="lh-capg">' + CAPG.map(function(g){ var L2 = capList(g[0]), all = L2.length && L2.every(function(m){ return have[m]; }); return '<button type="button" class="lh-cap' + (all ? ' on' : '') + '" data-g="' + g[0] + '"' + (L2.length ? '' : ' disabled') + '>' + (all ? '✓ ' : '＋ ') + 'Toàn bộ ' + g[1] + ' <span>(' + L2.length + ')</span></button>'; }).join('') + '</div>';
+  }
   function formModal(){
     var f = L.ed; if(!f) return '';
     var phs = (L.phongs || []), pp = (L.people || []);
@@ -6529,8 +6560,8 @@ showView('view-lookup-login');
       '<div class="lh-l" style="margin-top:12px;">Người được mời</div><div style="display:flex;gap:16px;margin:4px 0 8px;font-size:13.5px;"><label><input type="radio" name="lhMoi" class="lh-mode" value="all"' + (f.moi_tat_ca ? ' checked' : '') + '> Toàn công ty</label><label><input type="radio" name="lhMoi" class="lh-mode" value="sel"' + (!f.moi_tat_ca ? ' checked' : '') + '> Chọn phòng / từng người</label></div>' +
       (f.moi_tat_ca ? '' :
         '<div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Phòng</div><div class="lh-ph">' + (phs.length ? phs.map(function(p){ return '<label class="lh-pi"><input type="checkbox" class="lh-pc" value="' + E(p) + '"' + (f.moi_phong.indexOf(p) > -1 ? ' checked' : '') + '> ' + E(p.replace(/^PHÒNG TVĐT /, '')) + '</label>'; }).join('') : '<span style="color:var(--text-muted);font-size:12.5px;">Đang tải danh sách phòng...</span>') + '</div>' +
-        '<div style="font-size:12px;color:var(--text-muted);margin:8px 0 4px;">Từng người</div><input class="input" id="lhPq" list="lhPl" placeholder="Gõ tên hoặc ID rồi chọn" value="' + E(L.pq || '') + '" style="width:100%;"><datalist id="lhPl">' + pp.slice(0, 3000).map(function(p){ return '<option value="' + E(p.name + ' · ' + p.ma) + '"></option>'; }).join('') + '</datalist>' +
-        '<div class="lh-chips">' + chosen.map(function(c){ return '<span class="lh-pill">' + E(c.name || c.ma) + ' <b>' + E(c.ma) + '</b> <a href="#" class="lh-rm" data-ma="' + E(c.ma) + '">✕</a></span>'; }).join('') + '</div>') +
+        capChips(f) + '<div style="font-size:12px;color:var(--text-muted);margin:8px 0 4px;">Từng người</div><input class="input" id="lhPq" list="lhPl" placeholder="Gõ tên hoặc ID rồi chọn" value="' + E(L.pq || '') + '" style="width:100%;"><datalist id="lhPl">' + pp.slice(0, 3000).map(function(p){ return '<option value="' + E(p.name + ' · ' + p.ma) + '"></option>'; }).join('') + '</datalist>' +
+        '<div class="lh-chips">' + (chosen.length ? '<span style="font-size:12px;color:var(--text-muted);margin-right:4px;">Đã chọn ' + chosen.length + ' người' + (chosen.length > 1 ? ' · <a href="#" class="lh-rmall" style="color:var(--red);">Bỏ chọn hết</a>' : '') + '</span>' : '') + chosen.slice(0, L.showAll ? chosen.length : 40).map(function(c){ return '<span class="lh-pill">' + E(c.name || c.ma) + ' <b>' + E(c.ma) + '</b> <a href="#" class="lh-rm" data-ma="' + E(c.ma) + '">✕</a></span>'; }).join('') + (chosen.length > 40 && !L.showAll ? '<a href="#" class="lh-more" style="font-size:12.5px;">+ ' + (chosen.length - 40) + ' người nữa</a>' : '') + '</div>') +
       '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary" id="lhCancel">Hủy</button><button class="btn btn-primary" id="lhSave"' + (f.busy ? ' disabled' : '') + '>' + (f.busy ? 'Đang lưu...' : 'Lưu lịch họp') + '</button></div></div></div>';
   }
   function draw(){
@@ -6544,8 +6575,8 @@ showView('view-lookup-login');
   }
 
   /* ---- soạn / lưu ---- */
-  function blank(){ var n = new Date(); n.setMinutes(0, 0, 0); n.setHours(n.getHours() + 1); var e = new Date(n.getTime() + 3600e3); return {id:null, tieu_de:'', ngay:dk(n), gio:tm(n), gio2:tm(e), dia_diem:'', noi_dung:'', yeu_cau:'', moi_tat_ca:true, moi_phong:[], moi_nguoi:[], err:'', busy:false}; }
-  function fromRow(r){ var s = startOf(r), e = r.ket_thuc ? new Date(r.ket_thuc) : null; return {id:r.id, tieu_de:r.tieu_de || '', ngay:dk(s), gio:tm(s), gio2:e ? tm(e) : '', dia_diem:r.dia_diem || '', noi_dung:r.noi_dung || '', yeu_cau:r.yeu_cau || '', moi_tat_ca:!!r.moi_tat_ca, moi_phong:(r.moi_phong || []).slice(), moi_nguoi:(r.moi_nguoi || []).slice(), err:'', busy:false}; }
+  function blank(){ L.showAll = false; var n = new Date(); n.setMinutes(0, 0, 0); n.setHours(n.getHours() + 1); var e = new Date(n.getTime() + 3600e3); return {id:null, tieu_de:'', ngay:dk(n), gio:tm(n), gio2:tm(e), dia_diem:'', noi_dung:'', yeu_cau:'', moi_tat_ca:true, moi_phong:[], moi_nguoi:[], err:'', busy:false}; }
+  function fromRow(r){ L.showAll = false; var s = startOf(r), e = r.ket_thuc ? new Date(r.ket_thuc) : null; return {id:r.id, tieu_de:r.tieu_de || '', ngay:dk(s), gio:tm(s), gio2:e ? tm(e) : '', dia_diem:r.dia_diem || '', noi_dung:r.noi_dung || '', yeu_cau:r.yeu_cau || '', moi_tat_ca:!!r.moi_tat_ca, moi_phong:(r.moi_phong || []).slice(), moi_nguoi:(r.moi_nguoi || []).slice(), err:'', busy:false}; }
   function readForm(){
     var f = L.ed; if(!f) return;
     box.querySelectorAll('.lh-f').forEach(function(i){ f[i.getAttribute('data-f')] = i.value; });
@@ -6555,11 +6586,11 @@ showView('view-lookup-login');
     if(L.people && L.phongs) return;
     try {
       var emp = (LIVE.emp || []).filter(function(e){ return e.status !== 'Offboarding'; });
-      if(emp.length && LIVE.phong && LIVE.phong.length){ L.people = emp.map(function(e){ return {ma:e.code, name:e.name}; }); L.phongs = LIVE.phong.filter(function(p){ return !p.da_dong; }).map(function(p){ return p.ten; }); }
+      if(emp.length && LIVE.phong && LIVE.phong.length){ L.people = emp.map(function(e){ return {ma:e.code, name:e.name, cap:e.level || ''}; }); L.phongs = LIVE.phong.filter(function(p){ return !p.da_dong; }).map(function(p){ return p.ten; }); }
       else {
         var ph = await SBC.from('hr_phong').select('ten,da_dong').order('ten'); var all = [], from = 0, rr;
-        do { rr = await SBC.from('hr_nhan_su').select('ma_nv,ho_ten,trang_thai').order('ma_nv').range(from, from + 999); if(rr.error) throw rr.error; all = all.concat(rr.data || []); from += 1000; } while(rr.data && rr.data.length === 1000);
-        L.people = all.filter(function(x){ return x.trang_thai !== 'Offboarding'; }).map(function(x){ return {ma:x.ma_nv, name:x.ho_ten}; });
+        do { rr = await SBC.from('hr_nhan_su').select('ma_nv,ho_ten,trang_thai,cap').order('ma_nv').range(from, from + 999); if(rr.error) throw rr.error; all = all.concat(rr.data || []); from += 1000; } while(rr.data && rr.data.length === 1000);
+        L.people = all.filter(function(x){ return x.trang_thai !== 'Offboarding'; }).map(function(x){ return {ma:x.ma_nv, name:x.ho_ten, cap:x.cap || ''}; });
         L.phongs = ((ph && ph.data) || []).filter(function(p){ return !p.da_dong; }).map(function(p){ return p.ten; });
       }
     } catch(e){ L.people = L.people || []; L.phongs = L.phongs || []; }
@@ -6601,6 +6632,9 @@ showView('view-lookup-login');
     var dy = t.closest('.lh-delyes'); if(dy){ del(dy.getAttribute('data-id')); return; }
     if(t.closest('#lhSave')){ save(); return; }
     if(t.closest('#lhCancel') || t.closest('#lhClose') || t.id === 'lhOv'){ L.ed = null; L.view = null; draw(); return; }
+    var cg = t.closest('.lh-cap'); if(cg && L.ed){ readForm(); var g = cg.getAttribute('data-g'), L2 = capList(g), have = {}; L.ed.moi_nguoi.forEach(function(m){ have[String(m).toUpperCase()] = 1; }); var all = L2.length && L2.every(function(m){ return have[m]; }); if(all){ var rmv = {}; L2.forEach(function(m){ rmv[m] = 1; }); L.ed.moi_nguoi = L.ed.moi_nguoi.filter(function(m){ return !rmv[String(m).toUpperCase()]; }); } else { L2.forEach(function(m){ if(!have[m]){ L.ed.moi_nguoi.push(m); have[m] = 1; } }); } draw(); return; }
+    if(t.closest('.lh-rmall') && L.ed){ ev.preventDefault(); readForm(); L.ed.moi_nguoi = []; L.showAll = false; draw(); return; }
+    if(t.closest('.lh-more')){ ev.preventDefault(); readForm(); L.showAll = true; draw(); return; }
     var rm = t.closest('.lh-rm'); if(rm){ ev.preventDefault(); readForm(); L.ed.moi_nguoi = L.ed.moi_nguoi.filter(function(x){ return String(x).toUpperCase() !== rm.getAttribute('data-ma').toUpperCase(); }); draw(); return; }
     var op = t.closest('.lh-open'); if(op && !L.ed){ L.view = op.getAttribute('data-id'); draw(); return; }
   });
@@ -6882,6 +6916,7 @@ showView('view-lookup-login');
   function readF(f){
     box.querySelectorAll('.tb-f').forEach(function(i){ f[i.getAttribute('data-f')] = i.type === 'checkbox' ? i.checked : i.value; });
     if(box.querySelector('.tb-pc') || !f.moi_tat_ca) f.moi_phong = [].slice.call(box.querySelectorAll('.tb-pc')).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+    if(f.y_kien) box.querySelectorAll('.tb-yr').forEach(function(r){ var i = +r.getAttribute('data-i'); if(f.y_kien[i]){ r.querySelectorAll('.tb-y').forEach(function(x){ f.y_kien[i][x.getAttribute('data-f')] = x.value; }); } });
     if(f.viec) box.querySelectorAll('.tb-vr').forEach(function(r){ var i = +r.getAttribute('data-i'); if(f.viec[i]){ r.querySelectorAll('.tb-v').forEach(function(x){ f.viec[i][x.getAttribute('data-f')] = x.value; }); } });
   }
   function noticeForm(){
@@ -6905,6 +6940,9 @@ showView('view-lookup-login');
       f.viec.map(function(v, i){ return '<div class="tb-vr" data-i="' + i + '" style="display:grid;grid-template-columns:3fr 1.3fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;"><input class="input tb-v" data-f="noi_dung" value="' + E(v.noi_dung) + '" placeholder="Nội dung việc"><input class="input tb-v tb-vma" data-f="ma_nv" list="tbPl" value="' + E(v.ma_nv ? (nameOf(v.ma_nv) ? nameOf(v.ma_nv) + ' · ' + v.ma_nv : v.ma_nv) : '') + '" placeholder="Người phụ trách"><input type="date" class="input tb-v" data-f="han" value="' + E(v.han || '') + '"><a href="#" class="tb-vdel" data-i="' + i + '" style="color:var(--red);padding:0 6px;">✕</a></div>'; }).join('') +
       '<datalist id="tbPl">' + (T.people || []).slice(0, 3000).map(function(p){ return '<option value="' + E(p.name + ' · ' + p.ma) + '"></option>'; }).join('') + '</datalist>' +
       '<button class="btn btn-secondary" id="tbVadd" style="margin-top:2px;">＋ Thêm việc</button>' +
+      '<div class="lh-l" style="margin-top:14px;">Nhân sự đóng góp ý kiến</div>' +
+      (f.y_kien || []).map(function(y, i){ return '<div class="tb-yr" data-i="' + i + '" style="display:grid;grid-template-columns:1.4fr 3fr auto;gap:6px;margin-bottom:6px;align-items:start;"><input class="input tb-y" data-f="ma_nv" list="tbPl" value="' + E(y.ma_nv || '') + '" placeholder="Tên hoặc ID người góp ý"><textarea class="input tb-y" data-f="y_kien" rows="1" placeholder="Ý kiến đóng góp" style="min-height:38px;resize:vertical;">' + E(y.y_kien || '') + '</textarea><a href="#" class="tb-ydel" data-i="' + i + '" style="color:var(--red);padding:8px 6px 0;">✕</a></div>'; }).join('') +
+      '<button class="btn btn-secondary" id="tbYadd" style="margin-top:2px;">＋ Thêm ý kiến</button>' +
       (f.id ? '<div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Khi sửa, hệ thống không gửi lại thông báo. Người phụ trách việc mới sẽ thấy tóm tắt khi mở trang này.</div>' : '<div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Sau khi đăng, hệ thống tự gửi thông báo cho người được chọn và người phụ trách từng việc.</div>') +
       pickHtml(f, 'tbh') + '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary tb-close">Hủy</button><button class="btn btn-primary" id="tbHsave"' + (T.busy ? ' disabled' : '') + '>' + (T.busy ? 'Đang lưu...' : 'Lưu nội dung') + '</button></div></div></div>';
   }
@@ -6942,6 +6980,7 @@ showView('view-lookup-login');
       else if(me) act = v.tt === 'chua_xn' ? '<button class="btn btn-primary tb-vbtn" data-v="' + v.id + '" data-t="da_xn">Xác nhận</button>' : v.tt === 'da_xn' ? '<button class="btn btn-primary tb-vbtn" data-v="' + v.id + '" data-t="hoan_thanh">Hoàn thành</button> <a href="#" class="tb-vbtn" data-v="' + v.id + '" data-t="chua_xn" style="font-size:12px;">Hoàn tác</a>' : '<a href="#" class="tb-vbtn" data-v="' + v.id + '" data-t="da_xn" style="font-size:12px;">Hoàn tác</a>';
       return '<tr' + (me ? ' style="background:var(--accent-soft);"' : '') + '><td class="sub">' + (i + 1) + '</td><td>' + E(v.noi_dung) + '</td><td style="white-space:nowrap;">' + (v.ma_nv ? E(v.ten || '') + ' <span class="sub">' + E(v.ma_nv) + '</span>' : '—') + '</td><td style="white-space:nowrap;">' + fd(v.han) + '</td><td style="white-space:nowrap;">' + pill(v.tt) + (v.xn_luc ? '<div class="sub">' + fdt(v.ht_luc || v.xn_luc) + '</div>' : '') + '</td><td style="white-space:nowrap;">' + act + '</td></tr>';
     }).join('') + '</tbody></table></div>' : '<div style="font-size:13px;color:var(--text-muted);">Không có việc nào được giao.</div>');
+    if((x.y_kien || []).length) h += '<div style="font-weight:700;font-size:13px;margin:14px 0 6px;">Ý kiến đóng góp (' + x.y_kien.length + ')</div><div class="ln-scroll" style="max-height:none;"><table class="kvt dxm"><thead><tr><th>#</th><th>Người góp ý</th><th>ID</th><th>Ý kiến</th></tr></thead><tbody>' + x.y_kien.map(function(y, i){ return '<tr><td class="sub">' + (i + 1) + '</td><td style="white-space:nowrap;font-weight:600;">' + E(y.ten || '—') + '</td><td class="sub" style="white-space:nowrap;">' + E(y.ma_nv || '—') + '</td><td style="white-space:pre-wrap;min-width:220px;">' + E(y.y_kien || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
     h += '<div style="font-weight:700;font-size:13px;margin:14px 0 6px;">Phản hồi</div>' + ((x.ph || []).length ? x.ph.map(function(p){ return '<div style="padding:8px 10px;border-radius:8px;background:' + (p.vai === 'leader' ? 'var(--accent-soft)' : 'var(--bg,#f6f6fb)') + ';margin-bottom:6px;font-size:13.5px;"><b>' + E(p.ten || '') + '</b>' + (p.vai === 'leader' ? ' <span class="badge badge-blue">Leader</span>' : '') + ' <span class="sub">' + fdt(p.luc) + '</span><div style="white-space:pre-wrap;margin-top:2px;">' + E(p.noi_dung) + '</div></div>'; }).join('') : '<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;">Chưa có phản hồi.</div>');
     h += '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px;"><textarea class="input tb-ph" data-id="' + x.id + '" rows="2" placeholder="Viết phản hồi..." style="flex:1;"></textarea><button class="btn btn-primary tb-phsend" data-id="' + x.id + '">Gửi</button></div>';
     if(T.staff) h += '<div style="margin-top:12px;display:flex;gap:8px;"><button class="btn btn-secondary tb-hedit" data-id="' + x.id + '">Sửa tóm tắt</button><button class="btn btn-secondary tb-hdel" data-id="' + x.id + '" style="color:#B91C1C;">Xóa</button></div>';
@@ -6952,7 +6991,7 @@ showView('view-lookup-login');
     if(!list.length) return '<div class="panel"><div style="padding:22px;text-align:center;color:var(--text-muted);font-size:13.5px;">' + (T.staff ? 'Chưa đăng tóm tắt họp nào.' : 'Chưa có tóm tắt họp nào gửi cho bạn.') + '</div></div>';
     return list.map(function(x){
       var op = String(T.open) === String(x.id), mine = (x.viec || []).filter(function(v){ return !T.staff && v.ma_nv === T.ma; }), pend = mine.filter(function(v){ return v.tt === 'chua_xn'; }).length;
-      var h = '<div class="panel" style="margin-bottom:10px;"><div class="tb-tt" data-id="' + x.id + '" style="padding:14px 18px;cursor:pointer;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:200px;"><div style="font-weight:700;font-size:14.5px;">' + E(x.tieu_de) + '</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Họp ngày ' + fd(x.ngay || x.created_at) + ' · ' + (x.viec || []).length + ' việc · ' + (x.ph || []).length + ' phản hồi</div></div>' +
+      var h = '<div class="panel" style="margin-bottom:10px;"><div class="tb-tt" data-id="' + x.id + '" style="padding:14px 18px;cursor:pointer;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><div style="flex:1;min-width:200px;"><div style="font-weight:700;font-size:14.5px;">' + E(x.tieu_de) + '</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Họp ngày ' + fd(x.ngay || x.created_at) + ' · ' + (x.viec || []).length + ' việc · ' + (x.y_kien || []).length + ' ý kiến · ' + (x.ph || []).length + ' phản hồi</div></div>' +
         (pend ? '<span class="badge" style="background:#FEF3C7;color:#B45309;">' + pend + ' việc của bạn chờ xác nhận</span>' : '') + '<span style="color:var(--text-muted);">' + (op ? '▲' : '▼') + '</span></div>';
       if(op) h += '<div style="padding:0 18px 16px;border-top:1px solid var(--border);">' + ttBody(x) + '</div>';
       return h + '</div>';
@@ -6983,7 +7022,7 @@ showView('view-lookup-login');
   };
   /* ---- thao tác ---- */
   function blankN(){ return {tieu_de:'', noi_dung:'', han:'', can_xn:false, moi_tat_ca:false, moi_phong:[], moi_nguoi:[], err:''}; }
-  function blankH(){ return {id:null, lich_id:'', tieu_de:'', ngay:'', noi_dung:'', moi_tat_ca:false, moi_phong:[], moi_nguoi:[], viec:[{noi_dung:'', ma_nv:'', han:''}], err:''}; }
+  function blankH(){ return {id:null, lich_id:'', tieu_de:'', ngay:'', noi_dung:'', moi_tat_ca:false, moi_phong:[], moi_nguoi:[], viec:[{noi_dung:'', ma_nv:'', han:''}], y_kien:[{ma_nv:'', y_kien:''}], err:''}; }
   function maOf(v){ v = String(v || '').trim(); var m = v.match(/·\s*([^\s·]+)\s*$/); return (m ? m[1] : v).toUpperCase(); }
   async function call(name, a){
     var r = await SBC.rpc(name, a); if(r.error) throw r.error;
@@ -6997,6 +7036,8 @@ showView('view-lookup-login');
     var rm = t.closest('.tb-rm'); if(rm){ ev.preventDefault(); var f = T.f || T.h; readF(f); f.moi_nguoi = f.moi_nguoi.filter(function(x){ return String(x).toUpperCase() !== rm.getAttribute('data-ma').toUpperCase(); }); draw(); return; }
     if(t.id === 'tbNew'){ T.f = blankN(); T.msg = ''; draw(); loadPick(); return; }
     var hf = t.closest('.tb-hnewfor'); if(hf){ var rr = (LIVE.lhRows ? LIVE.lhRows() : []).filter(function(q){ return String(q.id) === hf.getAttribute('data-id'); })[0]; T.h = blankH(); T.msg = ''; if(rr){ var dd = new Date(rr.bat_dau); T.h.lich_id = rr.id; T.h.tieu_de = rr.tieu_de; T.h.ngay = dkey(rr.bat_dau); T.h.moi_tat_ca = !!rr.moi_tat_ca; T.h.moi_phong = (rr.moi_phong || []).slice(); T.h.moi_nguoi = (rr.moi_nguoi || []).slice(); } draw(); loadPick(); return; }
+    if(t.id === 'tbYadd'){ readF(T.h); (T.h.y_kien = T.h.y_kien || []).push({ma_nv:'', y_kien:''}); draw(); return; }
+    var yd = t.closest('.tb-ydel'); if(yd){ ev.preventDefault(); readF(T.h); T.h.y_kien.splice(+yd.getAttribute('data-i'), 1); if(!T.h.y_kien.length) T.h.y_kien.push({ma_nv:'', y_kien:''}); draw(); return; }
     if(t.id === 'tbVadd'){ readF(T.h); T.h.viec.push({noi_dung:'', ma_nv:'', han:''}); draw(); return; }
     var vd = t.closest('.tb-vdel'); if(vd){ ev.preventDefault(); readF(T.h); T.h.viec.splice(+vd.getAttribute('data-i'), 1); if(!T.h.viec.length) T.h.viec.push({noi_dung:'', ma_nv:'', han:''}); draw(); return; }
     if(t.id === 'tbSend' && !T.busy){
@@ -7013,7 +7054,8 @@ showView('view-lookup-login');
       var viec = h2.viec.filter(function(v){ return String(v.noi_dung || '').trim(); }).map(function(v){ return {id:v.id || null, noi_dung:v.noi_dung, ma_nv:maOf(v.ma_nv), han:v.han || null}; });
       T.busy = true; draw();
       try {
-        await call('hr_hop_luu', {p_val:{id:h2.id, lich_id:h2.lich_id || null, tieu_de:h2.tieu_de, ngay:h2.ngay || null, noi_dung:h2.noi_dung, moi_tat_ca:h2.moi_tat_ca, moi_phong:h2.moi_phong, moi_nguoi:h2.moi_nguoi, viec:viec}});
+        var yk = (h2.y_kien || []).filter(function(y){ return String(y.y_kien || '').trim() && String(y.ma_nv || '').trim(); }).map(function(y){ var raw = String(y.ma_nv).trim(), m = raw.match(/^(.*?)\s*·\s*([^\s·]+)\s*$/), up = raw.toUpperCase(), hit = (T.people || []).filter(function(p){ return String(p.ma).toUpperCase() === up; })[0]; return m ? {ma_nv:m[2].toUpperCase(), ten:m[1], y_kien:String(y.y_kien).trim()} : hit ? {ma_nv:hit.ma, ten:hit.name, y_kien:String(y.y_kien).trim()} : {ma_nv:'', ten:raw, y_kien:String(y.y_kien).trim()}; });
+        await call('hr_hop_luu', {p_val:{id:h2.id, lich_id:h2.lich_id || null, tieu_de:h2.tieu_de, ngay:h2.ngay || null, noi_dung:h2.noi_dung, moi_tat_ca:h2.moi_tat_ca, moi_phong:h2.moi_phong, moi_nguoi:h2.moi_nguoi, viec:viec, y_kien:yk}});
         T.h = null; T.msg = h2.id ? 'Đã lưu tóm tắt họp.' : 'Đã đăng tóm tắt họp và gửi thông báo cho người liên quan.'; T.busy = false; await LIVE.tbLoad(true);
       } catch(e){ h2.err = e.soft ? (/chua_chon/.test(e.message) ? 'Hãy chọn người được xem tóm tắt' : /thieu_tieu/.test(e.message) ? 'Hãy nhập tiêu đề' : e.message) : dbErr(e); T.busy = false; draw(); }
       return;
@@ -7025,7 +7067,7 @@ showView('view-lookup-login');
     var tt = t.closest('.tb-tt'); if(tt){ var id = tt.getAttribute('data-id'); T.open = String(T.open) === id ? null : id; draw(); return; }
     var vb = t.closest('.tb-vbtn'); if(vb){ ev.preventDefault(); act(function(){ return call('hr_hop_viec_tt', Object.assign(args(), {p_viec_id:+vb.getAttribute('data-v'), p_tt:vb.getAttribute('data-t')})); }); return; }
     var ps = t.closest('.tb-phsend'); if(ps){ var ta = box.querySelector('.tb-ph[data-id="' + ps.getAttribute('data-id') + '"]'); if(!ta || !ta.value.trim()) return; act(function(){ return call('hr_hop_phan_hoi_them', Object.assign(args(), {p_tt_id:+ps.getAttribute('data-id'), p_noi_dung:ta.value})); }); return; }
-    var he = t.closest('.tb-hedit'); if(he){ var x = T.tt.filter(function(r){ return String(r.id) === he.getAttribute('data-id'); })[0]; if(!x) return; T.h = {id:x.id, lich_id:x.lich_id || '', tieu_de:x.tieu_de, ngay:x.ngay || '', noi_dung:x.noi_dung || '', moi_tat_ca:!!x.moi_tat_ca, moi_phong:(x.moi_phong || []).slice(), moi_nguoi:(x.moi_nguoi || []).slice(), viec:(x.viec || []).map(function(v){ return {id:v.id, noi_dung:v.noi_dung, ma_nv:v.ma_nv || '', han:v.han || ''}; }), err:''}; if(!T.h.viec.length) T.h.viec.push({noi_dung:'', ma_nv:'', han:''}); draw(); loadPick(); return; }
+    var he = t.closest('.tb-hedit'); if(he){ var x = T.tt.filter(function(r){ return String(r.id) === he.getAttribute('data-id'); })[0]; if(!x) return; T.h = {id:x.id, lich_id:x.lich_id || '', tieu_de:x.tieu_de, ngay:x.ngay || '', noi_dung:x.noi_dung || '', moi_tat_ca:!!x.moi_tat_ca, moi_phong:(x.moi_phong || []).slice(), moi_nguoi:(x.moi_nguoi || []).slice(), viec:(x.viec || []).map(function(v){ return {id:v.id, noi_dung:v.noi_dung, ma_nv:v.ma_nv || '', han:v.han || ''}; }), y_kien:(x.y_kien || []).map(function(y){ return {ma_nv:y.ma_nv ? (y.ten ? y.ten + ' · ' + y.ma_nv : y.ma_nv) : (y.ten || ''), y_kien:y.y_kien || ''}; }), err:''}; if(!T.h.viec.length) T.h.viec.push({noi_dung:'', ma_nv:'', han:''}); if(!T.h.y_kien.length) T.h.y_kien.push({ma_nv:'', y_kien:''}); draw(); loadPick(); return; }
     var hd = t.closest('.tb-hdel'); if(hd){ if(!window.confirm('Xóa tóm tắt họp này cùng các việc và phản hồi?')) return; T.open = null; act(function(){ return call('hr_hop_xoa', {p_id:+hd.getAttribute('data-id')}); }); return; }
   });
   box.addEventListener('change', function(ev){
