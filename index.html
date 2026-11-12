@@ -5178,6 +5178,41 @@ showView('view-lookup-login');
         (E.err ? '<div class="callout" style="margin-bottom:10px;"><div>⚠️</div><div>' + esc(E.err) + '</div></div>' : '') + body +
         (r ? '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary" id="meCancel2">Hủy</button><button class="btn btn-primary" id="meSave"' + (E.busy ? ' disabled' : '') + '>' + (E.busy ? 'Đang lưu...' : 'Lưu thay đổi') + '</button></div>' : '') + '</div></div>';
     }
+    /* --- TP/GĐ thêm CTV mới vào phòng trong phạm vi --- */
+    function addModal(){
+      var F = M && M.add; if(!F) return '';
+      var v = F.val, phs = ((M.scope && M.scope.phong) || []).filter(function(p){ return p.id != null; });
+      var inp = function(k, lb, ph, type){ return '<label style="font-size:12px;color:var(--text-muted);display:block;">' + lb + '<br><input class="input ma-f" data-f="' + k + '" type="' + (type || 'text') + '" value="' + esc(v[k] || '') + '" placeholder="' + (ph || '') + '" style="width:100%;margin-top:3px;"></label>'; };
+      return '<div class="me-ov" id="maOv"><div class="me-md"><div style="display:flex;align-items:center;margin-bottom:6px;"><div style="font-size:16px;font-weight:800;flex:1;">Thêm CTV mới</div><button class="btn btn-secondary" id="maCancel" style="height:30px;padding:0 12px;">Đóng</button></div>' +
+        '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:12px;">Người mới được thêm ở cấp <b>CTV</b>. Lên cấp, đổi phòng hay cho nghỉ do quản trị viên xử lý.</div>' +
+        (F.err ? '<div class="callout" style="margin-bottom:10px;"><div>⚠️</div><div>' + esc(F.err) + '</div></div>' : '') +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;">' + inp('ma_nv', 'ID môi giới <b style="color:#B91C1C;">*</b>', 'VD: BM09') + inp('ho_ten', 'Họ tên <b style="color:#B91C1C;">*</b>') +
+        '<label style="font-size:12px;color:var(--text-muted);display:block;">Phòng<br><select class="select ma-f" data-f="phong_id" style="width:100%;margin-top:3px;">' + phs.map(function(p){ return '<option value="' + p.id + '"' + (String(v.phong_id) === String(p.id) ? ' selected' : '') + '>' + esc(String(p.ten || '').replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select></label>' +
+        inp('ngay_vao', 'Ngày vào', '', 'date') + inp('sdt', 'Số điện thoại') + inp('email', 'Email', '', 'email') + inp('ma_nguoi_gioi_thieu', 'Mã người giới thiệu', 'ID người giới thiệu (nếu có)') + '</div>' +
+        '<label style="font-size:12px;color:var(--text-muted);display:block;margin-top:10px;">Ghi chú<br><textarea class="input ma-f" data-f="ghi_chu" rows="2" style="width:100%;margin-top:3px;">' + esc(v.ghi_chu || '') + '</textarea></label>' +
+        '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary" id="maCancel2">Hủy</button><button class="btn btn-primary" id="maSave"' + (F.busy ? ' disabled' : '') + '>' + (F.busy ? 'Đang thêm...' : 'Thêm CTV') + '</button></div></div></div>';
+    }
+    function addOpen(){
+      var phs = ((M.scope && M.scope.phong) || []).filter(function(p){ return p.id != null; }), mine = phs.filter(function(p){ return p.phong_cua_toi; })[0] || phs[0] || {};
+      var d = new Date(), today = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+      M.add = {val:{ma_nv:'', ho_ten:'', phong_id:mine.id, ngay_vao:today, sdt:'', email:'', ma_nguoi_gioi_thieu:'', ghi_chu:''}, err:'', busy:false}; M.ed = null; draw('semp');
+      setTimeout(function(){ var i = document.querySelector('#sempContent .ma-f[data-f="ma_nv"]'); if(i) i.focus(); }, 30);
+    }
+    async function addSave(){
+      var F = M.add; if(!F || F.busy) return;
+      document.querySelectorAll('#sempContent .ma-f').forEach(function(i){ var f = i.getAttribute('data-f'); if(f) F.val[f] = i.value; });
+      var v = F.val; v.ma_nv = String(v.ma_nv || '').replace(/\s/g, '').toUpperCase();
+      if(!v.ma_nv){ F.err = 'Hãy nhập ID môi giới.'; draw('semp'); return; }
+      if(!String(v.ho_ten || '').trim()){ F.err = 'Hãy nhập họ tên.'; draw('semp'); return; }
+      F.busy = true; F.err = ''; draw('semp');
+      try {
+        var a = LIVE.memArgs(), r = await SBC.rpc('hr_nv_them', {p_ma:a.ma || null, p_pin:a.pin || null, p_val:v});
+        if(r.error) throw r.error;
+        if(!r.data || !r.data.ok){ var l = r.data && r.data.loi; F.err = l === 'trung_ma' ? 'ID ' + v.ma_nv + ' đã có trong danh sách nhân sự.' : l === 'ma_sai' ? 'ID chỉ gồm chữ, số (2–20 ký tự), không dấu cách.' : l === 'thieu_ho_ten' ? 'Hãy nhập họ tên.' : l === 'ngoai_pham_vi' ? 'Phòng này không thuộc phạm vi của bạn.' : l === 'ngay_vao_sai' ? 'Ngày vào không hợp lệ.' : l === 'khong_co_quyen' ? 'Chỉ Trưởng phòng hoặc Giám đốc được thêm CTV.' : 'Không thêm được, hãy đăng nhập lại.'; F.busy = false; draw('semp'); return; }
+        M.add = null; M.q = ''; if(typeof toast === 'function') toast('Đã thêm CTV ' + v.ho_ten + ' (' + r.data.ma_nv + ')' + (r.data.so_lieu ? ' · đã chuyển ' + r.data.so_lieu + ' ngày số liệu' : ''));
+        M.loading = true; draw('semp'); await loadScope(); M.loading = false; M.hl = r.data.ma_nv; draw('semp');
+      } catch(e){ F.err = (e && e.code === 'PGRST202') ? 'Máy chủ chưa bật chức năng thêm CTV (cần chạy file tp_them_ctv.sql).' : dbErr(e); F.busy = false; draw('semp'); }
+    }
     async function edOpen(ma){
       var x = ((M.scope && M.scope.nguoi) || []).filter(function(n){ return n.ma_nv === ma; })[0] || {};
       M.ed = {ma:ma, name:x.ho_ten, rec:null, err:'', busy:false}; draw('semp');
@@ -5240,7 +5275,7 @@ showView('view-lookup-login');
         el.innerHTML = h;
       } else if(page === 'semp'){
         if(LIVE.nhomEnsure) LIVE.nhomEnsure(function(){ draw('semp'); });
-        var hh = head('Nhân sự', 'Danh sách người trong phạm vi của bạn (chỉ xem).');
+        var hh = head('Nhân sự', M.scope && (M.scope.vai === 'TP' || M.scope.vai === 'GD') ? 'Danh sách người trong phạm vi của bạn. Bạn sửa được thông tin và thêm CTV mới.' : 'Danh sách người trong phạm vi của bạn (chỉ xem).');
         if(M.loading && !M.scope) return void (el.innerHTML = hh + '<div style="padding:24px;color:var(--text-muted);">Đang tải...</div>');
         if(M.setup === false) return void (el.innerHTML = hh + holderMsg('Chưa bật phân quyền theo cấp. Chạy file <b>kpi_phan_quyen.sql</b> trong Supabase SQL Editor.'));
         if(M.err) return void (el.innerHTML = hh + holderMsg('⚠️ ' + esc(M.err)));
@@ -5250,8 +5285,8 @@ showView('view-lookup-login');
         var sk = (M.sort && M.sort.k) || '', sd = (M.sort && M.sort.d) || 1;
         if(sk) rows = rows.slice().sort(function(a, b){ var x = String(a[sk] == null ? '' : a[sk]), y = String(b[sk] == null ? '' : b[sk]); if(!x && y) return 1; if(x && !y) return -1; return sd * x.localeCompare(y, 'vi', {numeric:true}); });
         var thS = function(k, lb){ return '<th class="me-sort" data-k="' + k + '" style="cursor:pointer;white-space:nowrap;">' + lb + (sk === k ? (sd > 0 ? ' ▲' : ' ▼') : ' <span style="opacity:.35;">⇅</span>') + '</th>'; };
-        hh += '<div class="panel"><div class="panel-head" style="padding:14px 18px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhân sự (' + rows.length + ')' + (canEd ? ' <span style="font-weight:400;font-size:12.5px;color:var(--text-muted);">· bấm vào một người để xem và sửa thông tin</span>' : '') + '</div>' + LIVE.grpSelect('meG', M.grp) + (Object.keys(phs).length > 1 ? '<select class="select" id="meP"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === M.ph ? ' selected' : '') + '>' + esc(p.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + (ng2.length > 8 ? '<input class="input" id="meQ" placeholder="Tìm tên hoặc ID" value="' + esc(M.q || '') + '">' : '') + '</div><div class="panel-body me-wrap"><table class="me-tbl"><thead><tr><th>#</th>' + thS('ho_ten', 'Tên') + thS('ma_nv', 'ID') + thS('ma_nhan_su', 'Mã nhân sự') + thS('phong', 'Phòng') + thS('cap', 'Cấp') + (canEd ? thS('gioi_thieu', 'Người giới thiệu') : '') + '</tr></thead><tbody>' +
-          (rows.length ? rows.slice(0, 400).map(function(x, i){ return '<tr' + (canEd ? ' class="me-row" data-m="' + esc(x.ma_nv) + '" style="cursor:pointer;' + (x.ma_nv === M.ma ? 'background:var(--accent-soft);' : '') + '"' : (x.ma_nv === M.ma ? ' style="background:var(--accent-soft);"' : '')) + '><td style="color:var(--text-muted);">' + (i + 1) + '</td><td style="white-space:nowrap;">' + esc(x.ho_ten) + (x.ma_nv === M.ma ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + '</td><td>' + esc(x.ma_nv) + '</td><td>' + esc(x.ma_nhan_su || '') + '</td><td style="white-space:nowrap;">' + esc((x.phong || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(x.cap) + '</td>' + (canEd ? '<td style="white-space:nowrap;">' + (x.gioi_thieu ? esc(x.gioi_thieu) + (x.ten_gt ? ' <span style="color:var(--text-muted);">· ' + esc(x.ten_gt) + '</span>' : '') : '<span style="color:var(--text-muted);">—</span>') + '</td>' : '') + '</tr>'; }).join('') : '<tr><td colspan="7" style="padding:16px;color:var(--text-muted);">Không có ai.</td></tr>') + '</tbody></table></div><div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);">' + scopeText() + (canEd ? ' Cấp, phòng và trạng thái do quản trị viên xử lý.' : ' Việc thêm người hoặc đổi phòng do quản trị viên xử lý.') + '</div></div>' + edModal();
+        hh += '<div class="panel"><div class="panel-head" style="padding:14px 18px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhân sự (' + rows.length + ')' + (canEd ? ' <span style="font-weight:400;font-size:12.5px;color:var(--text-muted);">· bấm vào một người để xem và sửa thông tin</span>' : '') + '</div>' + (canEd ? '<button class="btn btn-primary" id="meAdd">＋ Thêm CTV</button>' : '') + LIVE.grpSelect('meG', M.grp) + (Object.keys(phs).length > 1 ? '<select class="select" id="meP"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === M.ph ? ' selected' : '') + '>' + esc(p.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + (ng2.length > 8 ? '<input class="input" id="meQ" placeholder="Tìm tên hoặc ID" value="' + esc(M.q || '') + '">' : '') + '</div><div class="panel-body me-wrap"><table class="me-tbl"><thead><tr><th>#</th>' + thS('ho_ten', 'Tên') + thS('ma_nv', 'ID') + thS('ma_nhan_su', 'Mã nhân sự') + thS('phong', 'Phòng') + thS('cap', 'Cấp') + (canEd ? thS('gioi_thieu', 'Người giới thiệu') : '') + '</tr></thead><tbody>' +
+          (rows.length ? rows.slice(0, 400).map(function(x, i){ return '<tr' + (canEd ? ' class="me-row" data-m="' + esc(x.ma_nv) + '" style="cursor:pointer;' + (x.ma_nv === M.ma || x.ma_nv === M.hl ? 'background:var(--accent-soft);' : '') + '"' : (x.ma_nv === M.ma ? ' style="background:var(--accent-soft);"' : '')) + '><td style="color:var(--text-muted);">' + (i + 1) + '</td><td style="white-space:nowrap;">' + esc(x.ho_ten) + (x.ma_nv === M.ma ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + '</td><td>' + esc(x.ma_nv) + '</td><td>' + esc(x.ma_nhan_su || '') + '</td><td style="white-space:nowrap;">' + esc((x.phong || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(x.cap) + '</td>' + (canEd ? '<td style="white-space:nowrap;">' + (x.gioi_thieu ? esc(x.gioi_thieu) + (x.ten_gt ? ' <span style="color:var(--text-muted);">· ' + esc(x.ten_gt) + '</span>' : '') : '<span style="color:var(--text-muted);">—</span>') + '</td>' : '') + '</tr>'; }).join('') : '<tr><td colspan="7" style="padding:16px;color:var(--text-muted);">Không có ai.</td></tr>') + '</tbody></table></div><div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);">' + scopeText() + (canEd ? ' Bạn thêm được CTV mới vào phòng mình; lên cấp, đổi phòng và trạng thái do quản trị viên xử lý.' : ' Việc thêm người hoặc đổi phòng do quản trị viên xử lý.') + '</div></div>' + edModal() + addModal();
         el.innerHTML = hh;
         var qi = document.getElementById('meQ'); if(qi && M.qf){ qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
       } else if(page === 'sloan' && LIVE.loanDraw){ LIVE.loanDraw();
@@ -5324,9 +5359,12 @@ showView('view-lookup-login');
       C[p].addEventListener('click', function(ev){
         if(p !== 'semp' || !M) return;
         var t = ev.target, so = t.closest('.me-sort'); if(so){ var kk = so.getAttribute('data-k'); M.sort = (M.sort && M.sort.k === kk) ? {k:kk, d:-M.sort.d} : {k:kk, d:1}; draw('semp'); return; }
+        if(t.closest('#meAdd')){ addOpen(); return; }
+        if(t.closest('#maSave')){ addSave(); return; }
+        if(t.closest('#maCancel') || t.closest('#maCancel2') || t.id === 'maOv'){ M.add = null; draw('semp'); return; }
         if(t.closest('#meSave')){ edSave(); return; }
         if(t.closest('#meCancel') || t.closest('#meCancel2') || t.id === 'meOv'){ M.ed = null; draw('semp'); return; }
-        var rw = t.closest('.me-row'); if(rw && !M.ed){ edOpen(rw.getAttribute('data-m')); }
+        var rw = t.closest('.me-row'); if(rw && !M.ed && !M.add){ edOpen(rw.getAttribute('data-m')); }
       });
       C[p].addEventListener('click', function(ev){ var b = ev.target.closest('.mem-go'); if(b){ var pg = b.getAttribute('data-p'); adminGo(pg); LIVE.memLoad(pg); if(pg === 'dsk' && LIVE.loadDsk) LIVE.loadDsk(); if(pg === 'lenh' && LIVE.loadLenh) LIVE.loadLenh(); } });
     });
@@ -5798,7 +5836,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.121';
+  var V = 'v3.122';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
