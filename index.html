@@ -1239,6 +1239,13 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;}
 
 #cnContent .cap table.lad td,#cnContent .cap table.lad th{padding:4px 6px;font-size:12.5px;}
 #cnContent .lhint{background:#FFF7E0;border-left:4px solid #F59E0B;border-radius:0 8px 8px 0;padding:8px 12px;font-size:13px;margin-bottom:6px;color:#5A3A00;}
+
+/* Lịch họp: nội dung sau họp (v3.121) */
+.lh-sec{font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#92400E;margin:20px 0 6px;}
+.lh-sum{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.lh-sum .btn{font-size:12.5px;padding:6px 12px;}
+.lh-sum span{font-size:12px;color:#B45309;}
+.lh-card.past{opacity:1 !important;} .lh-card.past .lh-time,.lh-card.past .lh-title,.lh-card.past .lh-meta,.lh-card.past .lh-body,.lh-card.past .lh-req{opacity:.72;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -3004,6 +3011,7 @@ showView('view-lookup-login');
       if(!d || !d.ok){ fail(d && d.loi === 'khoa' ? 'Bạn đã nhập sai nhiều lần. Thử lại sau ' + d.phut + ' phút.' : 'Mã nhân sự hoặc PIN chưa đúng.'); return; }
       err.style.display = 'none'; LIVE.portal = d; LIVE.portalPin = pin; document.getElementById('lkPin').value = '';
       if(LIVE.enterMember && !LIVE.isCtv(d.cap)){ LIVE.enterMember({kind:'pin', ma:d.ma_nv, pin:pin, name:d.ho_ten, cap:d.cap, phong:d.phong}); return; }
+      if(LIVE.enterMember){ try { var sv = await SBC.rpc('hr_pham_vi_xem', {p_ma:d.ma_nv, p_pin:pin}); if(!sv.error && sv.data && sv.data.ok && (sv.data.nguoi || []).length > 1){ LIVE.enterMember({kind:'pin', ma:d.ma_nv, pin:pin, name:d.ho_ten, cap:d.cap, phong:d.phong}); return; } } catch(x){} }
       showView('view-lookup-portal'); renderLivePortal();
     } catch(e){ fail('Không kết nối được máy chủ. Thử lại sau.'); }
   };
@@ -3494,13 +3502,13 @@ showView('view-lookup-login');
     var d = LIVE.portal; if(!d) return;
     var first = d.ho_ten.split(/\s+/).pop(), s = PORTAL.scope;
     var h = (LIVE.preview ? '<div class="callout" style="margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;"><div>👁</div><div style="flex:1;min-width:180px;">Đang xem thử với tư cách <b>' + esc(d.ho_ten) + '</b>. Không cần PIN, không thay đổi dữ liệu.</div><button class="btn btn-primary btn-sm" id="pvExit">Thoát xem thử</button></div>' : '') + '<div class="greet"><h1>Chào ' + esc(first) + ' 👋</h1><p>' + esc(d.phong) + ' · ' + esc(d.cap) + '</p></div>';
-    var KVp = kvPortal(); h += '<div class="panel" style="margin-bottom:14px;"><div class="panel-head" style="padding:14px 18px 2px;"><div class="panel-title">KPI của ' + (s && s.vai === 'GD' ? 'các phòng bạn phụ trách' : s && s.vai === 'TP' ? 'phòng của bạn' : s && s.vai === 'NV' ? 'bạn và người bạn giới thiệu' : 'bạn') + '</div></div><div style="padding:6px 14px 10px;">' + KVp.html() + '</div></div>';
+    var KVp = kvPortal(); h += '<div class="panel" style="margin-bottom:14px;"><div class="panel-head" style="padding:14px 18px 2px;"><div class="panel-title">KPI của ' + (s && s.vai === 'GD' ? 'các phòng bạn phụ trách' : s && s.vai === 'TP' ? 'phòng của bạn' : s && (s.vai === 'NV' || (s.vai === 'CTV' && (s.nguoi || []).length > 1)) ? 'bạn và người bạn giới thiệu' : 'bạn') + '</div></div><div style="padding:6px 14px 10px;">' + KVp.html() + '</div></div>';
     h += luongPanel();
     if(PORTAL.err){ h += '<div class="panel"><div style="padding:18px;color:var(--red);font-size:13px;">Không tải được phạm vi xem: ' + esc(PORTAL.err) + '</div></div>'; }
     else if(!s){ h += '<div class="panel"><div style="padding:18px;color:var(--text-muted);font-size:13px;">Đang tải...</div></div>'; }
     else {
       var vai = s.vai, ng = s.nguoi || [], ph = s.phong || [];
-      var title = vai === 'GD' ? 'Các phòng bạn phụ trách' : vai === 'TP' ? 'Phòng của bạn' : vai === 'NV' ? 'Bạn và người bạn giới thiệu' : 'Thông tin của bạn';
+      var title = vai === 'GD' ? 'Các phòng bạn phụ trách' : vai === 'TP' ? 'Phòng của bạn' : (vai === 'NV' || (vai === 'CTV' && ng.length > 1)) ? 'Bạn và người bạn giới thiệu' : 'Thông tin của bạn';
       if(vai === 'GD' || vai === 'TP'){
         var tot = ng.length, off = ng.filter(function(x){ return x.cap !== 'CTV' && x.cap !== 'Chưa xếp'; }).length;
         h += '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));"><div class="stat-card"><div class="stat-label">' + (ph.length > 1 ? 'Số phòng' : 'Phòng') + '</div><div class="stat-value num">' + ph.length + '</div></div><div class="stat-card"><div class="stat-label">Tổng số người</div><div class="stat-value num">' + tot + '</div></div><div class="stat-card"><div class="stat-label">Nhân sự chính thức</div><div class="stat-value num">' + off + '</div></div><div class="stat-card"><div class="stat-label">Cộng tác viên</div><div class="stat-value num">' + (tot - off) + '</div></div></div>';
@@ -5047,7 +5055,7 @@ showView('view-lookup-login');
         }
         nguoi = live.filter(function(x){ return names.indexOf(x.dept) >= 0; }).sort(function(a, b){ return (thuTu[a.dept] - thuTu[b.dept]) || String(a.level).localeCompare(String(b.level)) || String(a.name).localeCompare(String(b.name)); }).map(cv);
         phongs = names.map(function(n){ var p = ph.filter(function(x){ return x.ten === n; })[0] || {}; return {id:p.id, ten:n, truong_phong:p.ten_truong_phong, so_nguoi:live.filter(function(x){ return x.dept === n; }).length, phong_cua_toi:n === e.dept}; });
-      } else if(vai === 'NV'){
+      } else if(vai === 'NV' || vai === 'CTV'){
         nguoi = live.filter(function(x){ return x.code === e.code || (x.ref && myIds.indexOf(up(x.ref)) >= 0); }).sort(function(a, b){ return String(a.level).localeCompare(String(b.level)) || String(a.name).localeCompare(String(b.name)); }).map(cv);
         phongs = [{ten:e.dept, phong_cua_toi:true}];
       } else { nguoi = [cv(e)]; phongs = [{ten:e.dept, phong_cua_toi:true}]; }
@@ -5055,7 +5063,7 @@ showView('view-lookup-login');
     }
     LIVE.startPreview = function(code){
       var e = (LIVE.emp || []).filter(function(x){ return x.code === code; })[0]; if(!e) return;
-      if(!LIVE.isCtv(e.level)){ LIVE.enterMember({kind:'person', preview:true, ma:e.code, name:e.name, cap:e.level, phong:e.dept}); return; }
+      if(!LIVE.isCtv(e.level) || scopeOf(e).nguoi.length > 1){ LIVE.enterMember({kind:'person', preview:true, ma:e.code, name:e.name, cap:e.level, phong:e.dept}); return; }
       LIVE.portal = {ma_nv:e.code, ho_ten:e.name, cap:e.level, phong:e.dept, ma_nhan_su:e.msn || null};
       LIVE.portalPin = null; LIVE.preview = true; LIVE.previewScope = scopeOf(e);
       document.getElementById('view-lookup-portal').classList.add('preview-mode');
@@ -5099,7 +5107,7 @@ showView('view-lookup-login');
     var M = null, saved = null;
     function up(x){ return String(x == null ? '' : x).trim().toUpperCase(); }
     function isCtv(cap){ return cap === 'CTV' || cap === 'Chưa xếp' || !cap; }
-    function roleName(vai, cap){ return vai === 'LEADER' ? 'Giám đốc & Leader' : /^GĐ/.test(cap) ? 'Giám đốc' : /^TP/.test(cap) ? 'Trưởng phòng' : 'Nhân viên'; }
+    function roleName(vai, cap){ return vai === 'LEADER' ? 'Giám đốc & Leader' : /^GĐ/.test(cap) ? 'Giám đốc' : /^TP/.test(cap) ? 'Trưởng phòng' : isCtv(cap) ? 'CTV' : 'Nhân viên'; }
     LIVE.isCtv = isCtv;
     LIVE.memArgs = function(){ if(!M || M.kind === 'leader') return {}; return {ma:M.ma, pin:M.pin || null}; };
 
@@ -5213,7 +5221,7 @@ showView('view-lookup-login');
     };
     function holderMsg(t){ return '<div class="panel"><div style="padding:28px 22px;text-align:center;color:var(--text-muted);font-size:13.5px;line-height:1.7;">' + t + '</div></div>'; }
     function head(t, p){ return '<div class="page-head"><div><h1>' + t + '</h1><p>' + p + '</p></div></div>'; }
-    function scopeText(X){ X = X || M; var v = X.kind === 'admin' ? 'LEADER' : (X.scope && X.scope.vai); return v === 'LEADER' ? 'Bạn xem được toàn bộ nhân sự của cả team.' : v === 'GD' || v === 'TP' ? 'Bạn xem được chính mình và toàn bộ nhân sự trong phòng của bạn.' : v === 'NV' ? 'Bạn xem được chính mình và các CTV được gán bên dưới (người giới thiệu).' : 'Bạn xem được thông tin của chính mình.'; }
+    function scopeText(X){ X = X || M; var v = X.kind === 'admin' ? 'LEADER' : (X.scope && X.scope.vai); return v === 'LEADER' ? 'Bạn xem được toàn bộ nhân sự của cả team.' : v === 'GD' || v === 'TP' ? 'Bạn xem được chính mình và toàn bộ nhân sự trong phòng của bạn.' : v === 'NV' || (v === 'CTV' && ((X.scope && X.scope.nguoi) || []).length > 1) ? 'Bạn xem được chính mình và những người bạn giới thiệu.' : 'Bạn xem được thông tin của chính mình.'; }
     function money(n){ return viNum(Math.round(+n || 0), 0); }
     function draw(page){
       var el = C[page]; if(!el) return;
@@ -5790,7 +5798,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.119';
+  var V = 'v3.121';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -6414,14 +6422,20 @@ showView('view-lookup-login');
   function card(r, past){
     var s = startOf(r), e = endOf(r), loc = r.dia_diem || '';
     var h = '<div class="lh-card' + (past ? ' past' : '') + '" data-id="' + r.id + '"><div class="lh-time"><b>' + tm(s) + '</b>' + (r.ket_thuc ? '<span>' + tm(e) + '</span>' : '') + '</div><div style="flex:1;min-width:0;">' +
-      '<div class="lh-title lh-open" data-id="' + r.id + '">' + E(r.tieu_de) + (LIVE.tbHas && LIVE.tbHas(r) ? ' <span title="Có tóm tắt họp">📝</span>' : '') + '</div>' +
+      '<div class="lh-title lh-open" data-id="' + r.id + '">' + E(r.tieu_de) + (LIVE.tbHas && LIVE.tbHas(r) ? ' <span title="Đã có nội dung sau họp">📝</span>' : '') + '</div>' +
       '<div class="lh-meta">' + (loc ? '📍 ' + (/^https?:\/\//i.test(loc) ? '<a href="' + E(loc) + '" target="_blank" rel="noopener" style="color:var(--accent-dark);">Link họp</a>' : E(loc)) + ' &nbsp;·&nbsp; ' : '') + '👥 ' + E(mois(r)) + '</div>' +
       (r.noi_dung ? '<div class="lh-body">' + linkify(r.noi_dung) + '</div>' : '') +
-      (r.yeu_cau ? '<div class="lh-req"><b>Yêu cầu khi tham gia:</b> ' + linkify(r.yeu_cau) + '</div>' : '') + '</div>';
+      (r.yeu_cau ? '<div class="lh-req"><b>Yêu cầu khi tham gia:</b> ' + linkify(r.yeu_cau) + '</div>' : '') + sumBtn(r) + '</div>';
     if(L.can){
       h += '<div class="lh-act">' + (L.ask === r.id ? '<span style="font-size:12.5px;">Xóa cuộc họp này?</span><button class="btn btn-secondary lh-delyes" data-id="' + r.id + '" style="color:#B91C1C;">Xóa</button><button class="btn btn-secondary lh-delno">Không</button>' : '<button class="btn btn-secondary lh-edit" data-id="' + r.id + '">Sửa</button><button class="btn btn-secondary lh-del" data-id="' + r.id + '">Xóa</button>') + '</div>';
     }
     return h + '</div>';
+  }
+  function sumBtn(r){
+    if(startOf(r).getTime() > Date.now()) return '';
+    var has = LIVE.tbHas && LIVE.tbHas(r);
+    if(has) return '<div class="lh-sum"><button class="btn btn-secondary lh-open" data-id="' + r.id + '">📝 Xem nội dung sau họp</button></div>';
+    return L.can ? '<div class="lh-sum"><button class="btn btn-primary tb-hnewfor" data-id="' + r.id + '">＋ Thêm nội dung sau họp</button><span>Chưa có nội dung</span></div>' : '';
   }
   function listView(){
     var now = Date.now(), up = L.rows.filter(function(r){ return endOf(r).getTime() >= now; }), pa = L.rows.filter(function(r){ return endOf(r).getTime() < now; }).sort(function(a, b){ return b.bat_dau < a.bat_dau ? -1 : 1; });
@@ -6431,9 +6445,13 @@ showView('view-lookup-login');
       var days = {}, order = []; up.forEach(function(r){ var k = dk(startOf(r)); if(!days[k]){ days[k] = []; order.push(k); } days[k].push(r); });
       order.forEach(function(k){ h += '<div class="lh-day">' + dayLabel(k) + '</div>' + days[k].map(function(r){ return card(r, false); }).join(''); });
     }
-    if(pa.length){
-      h += '<div style="margin:16px 0 8px;"><button class="btn btn-secondary" id="lhPast">' + (L.past ? 'Ẩn' : 'Xem') + ' cuộc họp đã qua (' + pa.length + ')</button></div>';
-      if(L.past) h += pa.map(function(r){ return '<div class="lh-day" style="opacity:.7;">' + dayLabel(dk(startOf(r))) + '</div>' + card(r, true); }).join('');
+    var wk = now - 7 * 864e5, rc = pa.filter(function(r){ return endOf(r).getTime() >= wk; }), old = pa.filter(function(r){ return endOf(r).getTime() < wk; });
+    if(rc.length){
+      h += '<div class="lh-sec">Vừa họp xong · 7 ngày gần đây</div>' + rc.map(function(r){ return '<div class="lh-day">' + dayLabel(dk(startOf(r))) + '</div>' + card(r, true); }).join('');
+    }
+    if(old.length){
+      h += '<div style="margin:16px 0 8px;"><button class="btn btn-secondary" id="lhPast">' + (L.past ? 'Ẩn' : 'Xem') + ' cuộc họp cũ hơn (' + old.length + ')</button></div>';
+      if(L.past) h += old.map(function(r){ return '<div class="lh-day" style="opacity:.7;">' + dayLabel(dk(startOf(r))) + '</div>' + card(r, true); }).join('');
     }
     return h;
   }
@@ -6840,17 +6858,17 @@ showView('view-lookup-login');
   function hopForm(){
     var f = T.h; if(!f) return '';
     var lich = (LIVE.lhRows ? LIVE.lhRows() : []).filter(function(r){ return new Date(r.bat_dau) > new Date(Date.now() - 45 * 864e5); });
-    return '<div class="me-ov" id="tbOv"><div class="me-md" style="max-width:760px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:16px;font-weight:800;flex:1;">' + (f.id ? 'Sửa tóm tắt họp' : 'Đăng tóm tắt họp') + '</div><button class="btn btn-secondary tb-close" style="height:30px;padding:0 12px;">Đóng</button></div>' +
+    return '<div class="me-ov" id="tbOv"><div class="me-md" style="max-width:760px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:16px;font-weight:800;flex:1;">' + (f.id ? 'Sửa nội dung sau họp' : 'Thêm nội dung sau họp') + '</div><button class="btn btn-secondary tb-close" style="height:30px;padding:0 12px;">Đóng</button></div>' +
       (f.err ? '<div class="callout" style="margin-bottom:10px;"><div>⚠️</div><div>' + E(f.err) + '</div></div>' : '') +
       (!f.id && lich.length ? '<label class="lh-l">Lấy từ lịch họp (không bắt buộc)<select class="select" id="tbLich" style="width:100%;"><option value="">— Không chọn —</option>' + lich.map(function(r){ var d = new Date(r.bat_dau); return '<option value="' + r.id + '"' + (String(f.lich_id) === String(r.id) ? ' selected' : '') + '>' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' · ' + E(r.tieu_de) + '</option>'; }).join('') + '</select></label>' : '') +
       '<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:10px;"><label class="lh-l">Tiêu đề<input class="input tb-f" data-f="tieu_de" value="' + E(f.tieu_de) + '" style="width:100%;" placeholder="VD: Họp giao ban tuần 45"></label><label class="lh-l">Ngày họp<input type="date" class="input tb-f" data-f="ngay" value="' + E(f.ngay) + '" style="width:100%;"></label></div>' +
-      '<label class="lh-l" style="margin-top:10px;">Tóm tắt nội dung cuộc họp<textarea class="input tb-f" data-f="noi_dung" rows="5" style="width:100%;">' + E(f.noi_dung) + '</textarea></label>' +
+      '<label class="lh-l" style="margin-top:10px;">Nội dung, kết luận cuộc họp<textarea class="input tb-f" data-f="noi_dung" rows="5" style="width:100%;">' + E(f.noi_dung) + '</textarea></label>' +
       '<div class="lh-l" style="margin-top:12px;">Danh sách việc giao</div>' +
       f.viec.map(function(v, i){ return '<div class="tb-vr" data-i="' + i + '" style="display:grid;grid-template-columns:3fr 1.3fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;"><input class="input tb-v" data-f="noi_dung" value="' + E(v.noi_dung) + '" placeholder="Nội dung việc"><input class="input tb-v tb-vma" data-f="ma_nv" list="tbPl" value="' + E(v.ma_nv ? (nameOf(v.ma_nv) ? nameOf(v.ma_nv) + ' · ' + v.ma_nv : v.ma_nv) : '') + '" placeholder="Người phụ trách"><input type="date" class="input tb-v" data-f="han" value="' + E(v.han || '') + '"><a href="#" class="tb-vdel" data-i="' + i + '" style="color:var(--red);padding:0 6px;">✕</a></div>'; }).join('') +
       '<datalist id="tbPl">' + (T.people || []).slice(0, 3000).map(function(p){ return '<option value="' + E(p.name + ' · ' + p.ma) + '"></option>'; }).join('') + '</datalist>' +
       '<button class="btn btn-secondary" id="tbVadd" style="margin-top:2px;">＋ Thêm việc</button>' +
       (f.id ? '<div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Khi sửa, hệ thống không gửi lại thông báo. Người phụ trách việc mới sẽ thấy tóm tắt khi mở trang này.</div>' : '<div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Sau khi đăng, hệ thống tự gửi thông báo cho người được chọn và người phụ trách từng việc.</div>') +
-      pickHtml(f, 'tbh') + '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary tb-close">Hủy</button><button class="btn btn-primary" id="tbHsave"' + (T.busy ? ' disabled' : '') + '>' + (T.busy ? 'Đang lưu...' : 'Lưu tóm tắt') + '</button></div></div></div>';
+      pickHtml(f, 'tbh') + '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary tb-close">Hủy</button><button class="btn btn-primary" id="tbHsave"' + (T.busy ? ' disabled' : '') + '>' + (T.busy ? 'Đang lưu...' : 'Lưu nội dung') + '</button></div></div></div>';
   }
   /* ---- danh sách ---- */
   var TT = {chua_xn:['Chưa xác nhận', '#B45309', '#FEF3C7'], da_xn:['Đã xác nhận', '#1D4ED8', '#DBEAFE'], hoan_thanh:['Hoàn thành', '#047857', '#D1FAE5']};
@@ -6910,7 +6928,7 @@ showView('view-lookup-login');
     if(T.err) h += '<div class="callout" style="margin-bottom:14px;"><div>⚠️</div><div>' + E(T.err) + '</div></div>';
     if(T.msg) h += '<div class="callout" style="margin-bottom:14px;"><div>✓</div><div>' + E(T.msg) + '</div></div>';
     if(T.xemThu) h += '<div class="callout" style="margin-bottom:14px;"><div>👁</div><div>Đang xem thử: các nút xác nhận và phản hồi không hoạt động ở chế độ này.</div></div>';
-    if(T.staff) h += '<div style="margin-bottom:12px;"><button class="btn btn-primary" id="tbNew">＋ Gửi thông báo</button> <span style="font-size:12.5px;color:var(--text-muted);">Tóm tắt họp được đăng ngay trong từng cuộc họp (mở cuộc họp, bấm Đăng tóm tắt).</span></div>';
+    if(T.staff) h += '<div style="margin-bottom:12px;"><button class="btn btn-primary" id="tbNew">＋ Gửi thông báo</button> <span style="font-size:12.5px;color:var(--text-muted);">Nội dung sau họp được thêm ngay ở từng cuộc họp (tab Sắp tới, mục Vừa họp xong).</span></div>';
     if(T.loading && !T.loaded) return h + '<div style="padding:24px;color:var(--text-muted);">Đang tải...</div>';
     h += tbList();
     var lo = lonely(); if(lo.length) h += '<div style="font-weight:700;margin:18px 0 8px;">Tóm tắt họp khác</div>' + ttList(lo);
@@ -6920,8 +6938,8 @@ showView('view-lookup-login');
   LIVE.tbHop = function(r){
     var xs = sumsFor(r), h = '';
     if(!xs.length && !T.staff) return '';
-    h += '<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-weight:800;font-size:14.5px;">📝 Tóm tắt họp</div>';
-    if(!xs.length) h += '<div style="font-size:13px;color:var(--text-muted);margin:6px 0;">Chưa có tóm tắt.</div><button class="btn btn-primary tb-hnewfor" data-id="' + r.id + '">＋ Đăng tóm tắt cuộc họp này</button>';
+    h += '<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;"><div style="font-weight:800;font-size:14.5px;">📝 Nội dung sau họp</div>';
+    if(!xs.length) h += '<div style="font-size:13px;color:var(--text-muted);margin:6px 0;">Chưa có nội dung.</div><button class="btn btn-primary tb-hnewfor" data-id="' + r.id + '">＋ Thêm nội dung sau họp</button>';
     xs.forEach(function(x){ h += '<div style="margin-top:8px;">' + (x.noi_dung || (x.viec || []).length || (x.ph || []).length ? '' : '') + ttBody(x) + '</div>'; });
     return h + '</div>';
   };
