@@ -1254,6 +1254,22 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;}
 .lh-cap.on{border-style:solid;border-color:var(--accent);background:var(--accent-soft);}
 .lh-cap:disabled{opacity:.45;cursor:not-allowed;}
 .me-f.me-lock{background:#F3F1F8 !important;color:#6B6A8A;cursor:not-allowed;border-style:dashed;}
+
+/* Ô soạn thảo có định dạng (v3.126) */
+.rt-wrap{border:1.5px solid var(--border,#D9D2EC);border-radius:10px;background:#fff;overflow:hidden;}
+.rt-wrap:focus-within{border-color:#8229E3;box-shadow:0 0 0 3px rgba(130,41,227,.12);}
+.rt-bar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:6px 8px;background:#F7F5FC;border-bottom:1px solid var(--border,#D9D2EC);}
+.rt-btn{border:1px solid transparent;background:transparent;border-radius:6px;min-width:32px;height:30px;padding:0 8px;font:500 13px Inter,sans-serif;color:var(--text,#1E1B4B);cursor:pointer;}
+.rt-btn:hover:not(:disabled){background:#fff;border-color:#D9D2EC;} .rt-btn:disabled{opacity:.35;cursor:default;}
+.rt-sep{width:1px;height:20px;background:#D9D2EC;margin:0 4px;}
+.rt-wrap textarea.rt-ta{border:0 !important;border-radius:0;box-shadow:none !important;width:100%;min-height:240px;resize:vertical;line-height:1.65;font-size:14px;padding:12px 14px;display:block;}
+.rt-wrap textarea.rt-ta.rt-ta-big{min-height:62vh;height:62vh;}
+.rt-pv{padding:12px 14px;min-height:240px;max-height:62vh;overflow:auto;}
+.rt-doc{font-size:14px;line-height:1.7;color:var(--text,#1E1B4B);word-break:break-word;}
+.rt-doc p{margin:0 0 4px;} .rt-doc .rt-sp{height:8px;} .rt-doc ul,.rt-doc ol{margin:2px 0 8px;padding-left:22px;} .rt-doc li{margin:2px 0;}
+.rt-doc .rt-h{font-weight:800;font-size:15px;margin:10px 0 4px;color:#4C1D95;} .rt-doc .rt-h:first-child{margin-top:0;}
+.rt-doc mark{background:#FDE68A;padding:0 2px;border-radius:3px;} .rt-doc a{color:var(--accent-dark,#6B3FAA);word-break:break-all;}
+@media (max-width:700px){.rt-btn{min-width:30px;height:32px;padding:0 6px;font-size:12.5px;} .rt-wrap textarea.rt-ta{min-height:200px;font-size:16px;}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -5860,7 +5876,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.125';
+  var V = 'v3.126';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -6935,7 +6951,7 @@ showView('view-lookup-login');
       (f.err ? '<div class="callout" style="margin-bottom:10px;"><div>⚠️</div><div>' + E(f.err) + '</div></div>' : '') +
       (!f.id && lich.length ? '<label class="lh-l">Lấy từ lịch họp (không bắt buộc)<select class="select" id="tbLich" style="width:100%;"><option value="">— Không chọn —</option>' + lich.map(function(r){ var d = new Date(r.bat_dau); return '<option value="' + r.id + '"' + (String(f.lich_id) === String(r.id) ? ' selected' : '') + '>' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' · ' + E(r.tieu_de) + '</option>'; }).join('') + '</select></label>' : '') +
       '<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:10px;"><label class="lh-l">Tiêu đề<input class="input tb-f" data-f="tieu_de" value="' + E(f.tieu_de) + '" style="width:100%;" placeholder="VD: Họp giao ban tuần 45"></label><label class="lh-l">Ngày họp<input type="date" class="input tb-f" data-f="ngay" value="' + E(f.ngay) + '" style="width:100%;"></label></div>' +
-      '<label class="lh-l" style="margin-top:10px;">Nội dung, kết luận cuộc họp<textarea class="input tb-f" data-f="noi_dung" rows="5" style="width:100%;">' + E(f.noi_dung) + '</textarea></label>' +
+      '<div class="lh-l" style="margin-top:10px;">Nội dung, kết luận cuộc họp</div>' + (window.RT ? RT.editor('<textarea class="input tb-f rt-ta" data-f="noi_dung" rows="12" placeholder="Gõ nội dung cuộc họp. Bôi đen chữ rồi bấm B / I / U để định dạng.">' + E(f.noi_dung) + '</textarea>') : '<textarea class="input tb-f" data-f="noi_dung" rows="12" style="width:100%;">' + E(f.noi_dung) + '</textarea>') +
       '<div class="lh-l" style="margin-top:12px;">Danh sách việc giao</div>' +
       f.viec.map(function(v, i){ return '<div class="tb-vr" data-i="' + i + '" style="display:grid;grid-template-columns:3fr 1.3fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;"><input class="input tb-v" data-f="noi_dung" value="' + E(v.noi_dung) + '" placeholder="Nội dung việc"><input class="input tb-v tb-vma" data-f="ma_nv" list="tbPl" value="' + E(v.ma_nv ? (nameOf(v.ma_nv) ? nameOf(v.ma_nv) + ' · ' + v.ma_nv : v.ma_nv) : '') + '" placeholder="Người phụ trách"><input type="date" class="input tb-v" data-f="han" value="' + E(v.han || '') + '"><a href="#" class="tb-vdel" data-i="' + i + '" style="color:var(--red);padding:0 6px;">✕</a></div>'; }).join('') +
       '<datalist id="tbPl">' + (T.people || []).slice(0, 3000).map(function(p){ return '<option value="' + E(p.name + ' · ' + p.ma) + '"></option>'; }).join('') + '</datalist>' +
@@ -6973,7 +6989,7 @@ showView('view-lookup-login');
   function ttBody(x){
     var h = '';
         h += '<div class="tb-sum" style="padding:0 0 4px;">';
-    if(x.noi_dung) h += '<div style="margin:12px 0;font-size:13.5px;line-height:1.7;white-space:pre-wrap;">' + E(x.noi_dung) + '</div>';
+    if(x.noi_dung) h += '<div class="rt-view" style="margin:12px 0;">' + (window.RT ? RT.html(x.noi_dung) : E(x.noi_dung)) + '</div>';
     h += '<div style="font-weight:700;font-size:13px;margin:10px 0 6px;">Việc cần làm</div>' + ((x.viec || []).length ? '<div class="ln-scroll" style="max-height:none;"><table class="kvt"><thead><tr><th>#</th><th>Nội dung</th><th>Phụ trách</th><th>Hạn</th><th>Trạng thái</th><th></th></tr></thead><tbody>' + x.viec.map(function(v, i){
       var me = !T.staff && v.ma_nv === T.ma, act = '';
       if(T.staff) act = '<select class="select tb-vst" data-v="' + v.id + '" style="min-width:130px;"><option value="chua_xn"' + (v.tt === 'chua_xn' ? ' selected' : '') + '>Chưa xác nhận</option><option value="da_xn"' + (v.tt === 'da_xn' ? ' selected' : '') + '>Đã xác nhận</option><option value="hoan_thanh"' + (v.tt === 'hoan_thanh' ? ' selected' : '') + '>Hoàn thành</option></select>';
@@ -7583,6 +7599,70 @@ box.addEventListener('input', function(e){
   function later(){ if(pending) return; pending = true; (window.requestAnimationFrame || setTimeout)(function(){ pending = false; labelTables(); }); }
   new MutationObserver(later).observe(document.body, {childList:true, subtree:true});
   labelTables();
+})();
+</script>
+
+<script>
+/* ===== Ô soạn thảo có định dạng (v3.126): lưu dạng chữ có ký hiệu, hiển thị thành định dạng ===== */
+(function(){
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function inl(t){
+    return t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/__(.+?)__/g, '<u>$1</u>').replace(/==(.+?)==/g, '<mark>$1</mark>')
+      .replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<i>$2</i>')
+      .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  }
+  function html(src){
+    var L = String(src || '').replace(/\r/g, '').split('\n'), out = [], list = null;
+    function close(){ if(list){ out.push('</' + list + '>'); list = null; } }
+    L.forEach(function(raw){
+      var t = esc(raw), m;
+      if((m = t.match(/^#{1,3}\s+(.*)$/))){ close(); out.push('<div class="rt-h">' + inl(m[1]) + '</div>'); return; }
+      if((m = t.match(/^\s*[-•*]\s+(.*)$/))){ if(list !== 'ul'){ close(); out.push('<ul>'); list = 'ul'; } out.push('<li>' + inl(m[1]) + '</li>'); return; }
+      if((m = t.match(/^\s*\d+[.)]\s+(.*)$/))){ if(list !== 'ol'){ close(); out.push('<ol>'); list = 'ol'; } out.push('<li>' + inl(m[1]) + '</li>'); return; }
+      close();
+      out.push(t.trim() ? '<p>' + inl(t) + '</p>' : '<div class="rt-sp"></div>');
+    });
+    close();
+    return '<div class="rt-doc">' + out.join('') + '</div>';
+  }
+  var BTN = [['b', '<b>B</b>', 'In đậm (Ctrl+B)'], ['i', '<i>I</i>', 'In nghiêng (Ctrl+I)'], ['u', '<u>U</u>', 'Gạch chân (Ctrl+U)'], ['mark', '<span style="background:#FDE68A;padding:0 3px;">A</span>', 'Tô nổi bật'], ['|'], ['h', 'Tiêu đề', 'Dòng tiêu đề'], ['ul', '• Gạch đầu dòng', 'Danh sách gạch đầu dòng'], ['ol', '1. Đánh số', 'Danh sách đánh số'], ['|'], ['clear', 'Bỏ định dạng', 'Bỏ định dạng phần đang chọn']];
+  function editor(ta){
+    return '<div class="rt-wrap"><div class="rt-bar">' + BTN.map(function(b){ return b[0] === '|' ? '<span class="rt-sep"></span>' : '<button type="button" class="rt-btn" data-md="' + b[0] + '" title="' + b[2] + '">' + b[1] + '</button>'; }).join('') +
+      '<span style="flex:1;"></span><button type="button" class="rt-btn rt-prev" title="Xem trước">👁 Xem trước</button><button type="button" class="rt-btn rt-big" title="Mở rộng ô soạn">⤢ Mở rộng</button></div>' + ta + '<div class="rt-pv" style="display:none;"></div></div>';
+  }
+  function apply(ta, k){
+    var v = ta.value, a = ta.selectionStart, b = ta.selectionEnd, sel = v.slice(a, b), W = {b:'**', i:'*', u:'__', mark:'=='}[k], ins, s0 = a, s1;
+    if(W){
+      if(!sel){ ins = W + 'chữ' + W; s0 = a + W.length; s1 = s0 + 3; }
+      else if(sel.slice(0, W.length) === W && sel.slice(-W.length) === W && sel.length > 2 * W.length){ ins = sel.slice(W.length, -W.length); s1 = a + ins.length; }
+      else { ins = W + sel + W; s1 = a + ins.length; }
+      ta.value = v.slice(0, a) + ins + v.slice(b); ta.setSelectionRange(s0, s1); return;
+    }
+    if(k === 'clear'){ ins = sel.replace(/\*\*|__|==/g, '').replace(/(^|[^*])\*([^*]+)\*/g, '$1$2').replace(/^(\s*)(#{1,3}\s+|[-•*]\s+|\d+[.)]\s+)/gm, '$1'); ta.value = v.slice(0, a) + ins + v.slice(b); ta.setSelectionRange(a, a + ins.length); return; }
+    var ls = v.lastIndexOf('\n', a - 1) + 1, le = v.indexOf('\n', b); if(le < 0) le = v.length;
+    var lines = v.slice(ls, le).split('\n'), n = 0;
+    var strip = function(l){ return l.replace(/^(\s*)(#{1,3}\s+|[-•*]\s+|\d+[.)]\s+)/, '$1'); };
+    var allSame = lines.every(function(l){ return !l.trim() || (k === 'h' ? /^#{1,3}\s/.test(l) : k === 'ul' ? /^\s*[-•*]\s/.test(l) : /^\s*\d+[.)]\s/.test(l)); });
+    lines = lines.map(function(l){ if(!l.trim()) return l; var c = strip(l); if(allSame) return c; n++; return (k === 'h' ? '# ' : k === 'ul' ? '- ' : n + '. ') + c; });
+    ins = lines.join('\n'); ta.value = v.slice(0, ls) + ins + v.slice(le); ta.setSelectionRange(ls, ls + ins.length);
+  }
+  function grow(ta){ if(ta.classList.contains('rt-ta-big')) return; ta.style.height = 'auto'; ta.style.height = Math.min(Math.max(ta.scrollHeight + 4, 240), 560) + 'px'; }
+  document.addEventListener('mousedown', function(ev){ if(ev.target.closest && ev.target.closest('.rt-btn')) ev.preventDefault(); }, true);
+  document.addEventListener('click', function(ev){
+    var bt = ev.target.closest && ev.target.closest('.rt-btn'); if(!bt) return;
+    var w = bt.closest('.rt-wrap'), ta = w && w.querySelector('textarea'), pv = w && w.querySelector('.rt-pv'); if(!ta) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if(bt.classList.contains('rt-prev')){ var on = pv.style.display === 'none'; pv.style.display = on ? '' : 'none'; ta.style.display = on ? 'none' : ''; pv.innerHTML = on ? (ta.value.trim() ? html(ta.value) : '<div style="color:var(--text-muted);font-size:13px;">Chưa có nội dung.</div>') : ''; bt.innerHTML = on ? '✎ Soạn tiếp' : '👁 Xem trước'; w.querySelectorAll('.rt-btn[data-md]').forEach(function(x){ x.disabled = on; }); return; }
+    if(bt.classList.contains('rt-big')){ var big = !ta.classList.contains('rt-ta-big'); ta.classList.toggle('rt-ta-big', big); ta.style.height = big ? '' : 'auto'; if(!big) grow(ta); bt.innerHTML = big ? '⤡ Thu nhỏ' : '⤢ Mở rộng'; ta.focus(); return; }
+    ta.focus(); apply(ta, bt.getAttribute('data-md')); grow(ta);
+  }, true);
+  document.addEventListener('keydown', function(ev){
+    var ta = ev.target; if(!ta.classList || !ta.classList.contains('rt-ta') || !(ev.ctrlKey || ev.metaKey)) return;
+    var k = {b:'b', i:'i', u:'u'}[String(ev.key).toLowerCase()]; if(!k) return; ev.preventDefault(); apply(ta, k);
+  }, true);
+  document.addEventListener('input', function(ev){ if(ev.target.classList && ev.target.classList.contains('rt-ta')) grow(ev.target); }, true);
+  new MutationObserver(function(){ document.querySelectorAll('textarea.rt-ta:not([data-g])').forEach(function(t){ t.setAttribute('data-g', '1'); grow(t); }); }).observe(document.documentElement, {childList:true, subtree:true});
+  window.RT = {html:html, editor:editor};
 })();
 </script>
 </body>
