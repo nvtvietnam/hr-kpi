@@ -1878,16 +1878,17 @@ if(document.readyState==='complete')go();else window.addEventListener('load',go)
 <div id="pinModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,27,45,.5);z-index:50;align-items:center;justify-content:center;">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Đổi mã PIN</div>
+      <div class="modal-title" id="pinTitle">Đổi mã PIN</div>
       <button class="btn-ghost" id="btnClosePinModal" style="font-size:16px;">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field">
+      <div id="pinForceNote" style="display:none;font-size:13px;line-height:1.55;background:#FFF7E6;border:1px solid #FDE3A7;border-radius:10px;padding:10px 12px;margin-bottom:12px;">Mã PIN bạn đang dùng do quản lý cấp. Để bảo mật, hãy <b>đặt mã PIN riêng của bạn</b> (6 chữ số) trước khi vào app.</div>
+      <div class="field" id="pinCurWrap">
         <label>Mã PIN hiện tại</label>
         <input type="password" id="pinCur" placeholder="••••" inputmode="numeric">
       </div>
       <div class="field">
-        <label>Mã PIN mới (4–6 số)</label>
+        <label>Mã PIN mới (6 chữ số)</label>
         <input type="password" id="pinNew" placeholder="••••" inputmode="numeric">
       </div>
       <div class="field" style="margin-bottom:0;">
@@ -3048,6 +3049,7 @@ showView('view-lookup-login');
       var d = r.data;
       if(!d || !d.ok){ fail(d && d.loi === 'khoa' ? 'Bạn đã nhập sai nhiều lần. Thử lại sau ' + d.phut + ' phút.' : 'Mã nhân sự hoặc PIN chưa đúng.'); return; }
       err.style.display = 'none'; LIVE.portal = d; LIVE.portalPin = pin; document.getElementById('lkPin').value = '';
+      if(d.phai_doi && LIVE.enterMember){ var mo = {kind:'pin', ma:d.ma_nv, pin:pin, name:d.ho_ten, cap:d.cap, phong:d.phong}; LIVE.pinForce(mo); return; }
       if(LIVE.enterMember && !LIVE.isCtv(d.cap)){ LIVE.enterMember({kind:'pin', ma:d.ma_nv, pin:pin, name:d.ho_ten, cap:d.cap, phong:d.phong}); return; }
       if(LIVE.enterMember){ LIVE.enterMember({kind:'pin', ma:d.ma_nv, pin:pin, name:d.ho_ten, cap:d.cap, phong:d.phong}); return; }
       showView('view-lookup-portal'); renderLivePortal();
@@ -3078,10 +3080,30 @@ showView('view-lookup-login');
     if(!LIVE.client || !LIVE.portal){ document.getElementById('pinModalOverlay').style.display = 'none'; toast('Chế độ thử: chưa đổi PIN thật'); return; }
     var r = await SBC.rpc('hr_doi_pin', {p_ma_nv:LIVE.portal.ma_nv, p_pin_cu:cur, p_pin_moi:nw});
     var d = r.data;
-    if(r.error || !d || !d.ok){ pf(d && d.loi === 'khoa' ? 'Đã nhập sai nhiều lần, thử lại sau ' + d.phut + ' phút.' : (d && d.loi === 'pin_khong_hop_le' ? 'PIN mới không hợp lệ.' : 'PIN hiện tại chưa đúng.')); return; }
+    if(r.error || !d || !d.ok){ pf(d && d.loi === 'khoa' ? 'Đã nhập sai nhiều lần, thử lại sau ' + d.phut + ' phút.' : d && d.loi === 'trung_pin_cu' ? 'PIN mới phải khác PIN đang dùng.' : (d && d.loi === 'pin_khong_hop_le' ? 'PIN mới không hợp lệ.' : 'PIN hiện tại chưa đúng.')); return; }
     document.getElementById('pinModalOverlay').style.display = 'none';
     ['pinCur','pinNew','pinNew2'].forEach(function(i){ document.getElementById(i).value = ''; });
+    LIVE.portalPin = nw; if(LIVE.member && LIVE.member.kind === 'pin') LIVE.member.pin = nw;
+    var fo = LIVE.pinForceObj; LIVE.pinForceObj = null; pinForceUi(false);
+    if(fo){ fo.pin = nw; LIVE.portal.phai_doi = false; toast('Đã đặt mã PIN mới'); LIVE.enterMember(fo); return; }
     toast('Đã đổi PIN');
+  });
+  function pinForceUi(on){
+    var g = function(i){ return document.getElementById(i); };
+    g('pinTitle').textContent = on ? 'Đặt mã PIN mới' : 'Đổi mã PIN'; g('pinForceNote').style.display = on ? 'block' : 'none'; g('pinCurWrap').style.display = on ? 'none' : '';
+    g('btnClosePinModal').style.display = on ? 'none' : ''; g('btnCancelPin').textContent = on ? 'Đăng xuất' : 'Hủy';
+    var e = g('pinErr'); if(e) e.style.display = 'none';
+  }
+  /* PIN do quản lý cấp: bắt buộc đổi trước khi vào app */
+  LIVE.pinForce = function(o){
+    LIVE.pinForceObj = o; pinForceUi(true); showView('view-lookup-login');
+    document.getElementById('pinCur').value = o.pin; document.getElementById('pinNew').value = ''; document.getElementById('pinNew2').value = '';
+    document.getElementById('pinModalOverlay').style.display = 'flex';
+    setTimeout(function(){ var i = document.getElementById('pinNew'); if(i) i.focus(); }, 50);
+  };
+  document.getElementById('btnCancelPin').addEventListener('click', function(){
+    if(!LIVE.pinForceObj) return; LIVE.pinForceObj = null; pinForceUi(false); document.getElementById('pinCur').value = '';
+    LIVE.portal = null; LIVE.portalPin = null; showView('view-lookup-login');
   });
   /* ---------- Admin: Lịch sử truy cập ---------- */
   var LOG = {rows:[], loai:'', kq:'', q:'', days:'7', loading:false, err:''};
@@ -3094,13 +3116,13 @@ showView('view-lookup-login');
     var br = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /Firefox|FxiOS/.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : '';
     return os + (br ? ' · ' + br : '');
   }
-  var LOAI_TXT = {tra_cuu:'Tra cứu (mã NV + PIN)', quan_ly:'Đăng nhập quản lý', doi_pin:'Đổi PIN'};
+  var LOAI_TXT = {tra_cuu:'Tra cứu (mã NV + PIN)', quan_ly:'Đăng nhập quản lý', doi_pin:'Đổi PIN', cap_pin:'TP cấp PIN', them_ctv:'TP thêm CTV'};
   var KQ_BADGE = {thanh_cong:['badge-green','Thành công'], sai_thong_tin:['badge-amber','Sai thông tin'], bi_khoa:['badge-red','Bị khóa']};
   LIVE.loadLog = async function(){
     if(!LIVE.on || LIVE.role !== 'admin'){ renderHistory(); return; }
     LOG.loading = true; LOG.err = ''; renderHistory();
     try {
-      var q = LIVE.client.from('hr_nhat_ky').select('id,thoi_gian,loai,ma_nv,ho_ten,email,ket_qua,ip,thiet_bi').order('thoi_gian', {ascending:false}).limit(1000);
+      var q = LIVE.client.from('hr_nhat_ky').select('*').order('thoi_gian', {ascending:false}).limit(1000);
       if(LOG.days !== 'all') q = q.gte('thoi_gian', new Date(Date.now() - (+LOG.days) * 86400000).toISOString());
       var r = await q; if(r.error) throw r.error;
       LOG.rows = r.data || [];
@@ -3124,7 +3146,7 @@ showView('view-lookup-login');
       return;
     }
     var rows = logFiltered(), ok = 0, bad = 0, people = {};
-    LOG.rows.forEach(function(r){ if(r.ket_qua === 'thanh_cong'){ ok++; people[r.ma_nv || r.email] = 1; } else bad++; });
+    LOG.rows.forEach(function(r){ if(r.loai === 'cap_pin' || r.loai === 'them_ctv') return; if(r.ket_qua === 'thanh_cong'){ ok++; people[r.ma_nv || r.email] = 1; } else bad++; });
     var h = head + '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));">' +
       '<div class="stat-card"><div class="stat-label">Lượt đăng nhập thành công</div><div class="stat-value num">' + ok + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Người đã truy cập</div><div class="stat-value num">' + Object.keys(people).length + '</div></div>' +
@@ -3141,7 +3163,7 @@ showView('view-lookup-login');
       h += '<div class="panel-body"><table><thead><tr><th>Thời gian</th><th>Loại</th><th>Người dùng</th><th>Kết quả</th><th>Thiết bị</th><th>IP</th></tr></thead><tbody>' +
         (rows.length ? rows.slice(0, 300).map(function(r){
           var b = KQ_BADGE[r.ket_qua] || ['badge-gray', r.ket_qua];
-          var who = r.loai === 'quan_ly' ? '<b>' + esc(r.email || '') + '</b> <span style="color:var(--text-muted);">(' + esc(r.ho_ten || '') + ')</span>' : '<b class="num">' + esc(r.ma_nv || '') + '</b> ' + (r.ho_ten ? esc(r.ho_ten) : '<span style="color:var(--text-muted);">(mã không có trong hệ thống)</span>');
+          var who = r.loai === 'quan_ly' ? '<b>' + esc(r.email || '') + '</b> <span style="color:var(--text-muted);">(' + esc(r.ho_ten || '') + ')</span>' : '<b class="num">' + esc(r.ma_nv || '') + '</b> ' + (r.ho_ten ? esc(r.ho_ten) : '<span style="color:var(--text-muted);">(mã không có trong hệ thống)</span>') + (r.chi_tiet ? '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + esc(r.chi_tiet) + '</div>' : '');
           return '<tr><td class="num" style="white-space:nowrap;">' + fmtTime(r.thoi_gian) + '</td><td>' + esc(LOAI_TXT[r.loai] || r.loai) + '</td><td>' + who + '</td><td><span class="badge ' + b[0] + '">' + b[1] + '</span></td><td>' + esc(devName(r.thiet_bi)) + '</td><td class="num">' + esc(r.ip || '—') + '</td></tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:22px;">Chưa có lượt nào trong khoảng này.</td></tr>') +
         '</tbody></table></div><div class="table-foot"><span>Hiện ' + Math.min(rows.length, 300) + ' / ' + rows.length + ' lượt (tối đa 1000 lượt mới nhất được tải)</span><span></span></div>';
@@ -5218,6 +5240,75 @@ showView('view-lookup-login');
         (E.err ? '<div class="callout" style="margin-bottom:10px;"><div>⚠️</div><div>' + esc(E.err) + '</div></div>' : '') + body +
         (r ? '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-secondary" id="meCancel2">Hủy</button><button class="btn btn-primary" id="meSave"' + (E.busy || !nEmpty ? ' disabled' : '') + '>' + (E.busy ? 'Đang lưu...' : 'Lưu bổ sung') + '</button></div>' : '') + '</div></div>';
     }
+    /* --- TP/GĐ cấp mã PIN cho nhân sự trong phạm vi (PIN dùng 1 lần, người được cấp phải đổi khi đăng nhập) --- */
+    function cpStat(x){ return !x.co_pin ? '<span class="badge badge-gray">Chưa có PIN</span>' : x.phai_doi ? '<span class="badge badge-amber">Chờ đổi PIN</span>' : '<span class="badge badge-green">Đã có PIN</span>'; }
+    function cpShow(x, P){ var q = (P.q || '').trim().toLowerCase(); return (!P.ph || x.phong === P.ph) && (!q || (x.ho_ten + ' ' + x.ma_nv).toLowerCase().indexOf(q) > -1); }
+    function cpModal(){
+      var P = M && M.cp; if(!P) return '';
+      var h = '<div class="me-ov" id="cpOv"><div class="me-md" style="max-width:660px;"><div style="display:flex;align-items:center;margin-bottom:6px;"><div style="font-size:16px;font-weight:800;flex:1;">🔑 Cấp mã PIN</div><button class="btn btn-secondary" id="cpClose" style="height:30px;padding:0 12px;">Đóng</button></div>';
+      if(P.res){
+        var rs = P.res.rows || [];
+        return h + '<div class="callout" style="margin-bottom:12px;background:#ECFDF5;border-color:#A7F3D0;"><div>✅</div><div>Đã cấp PIN cho <b>' + rs.length + '</b> người. Danh sách PIN <b>chỉ hiện một lần</b>, bạn sao chép gửi cho từng người nhé. Khi đăng nhập lần đầu, họ phải đặt PIN riêng mới vào được app.</div></div>' +
+          '<div class="cp-res" style="max-height:46vh;overflow:auto;border:1px solid var(--border);border-radius:10px;">' +
+          rs.map(function(x, i){ return '<div style="display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-muted);width:22px;">' + (i + 1) + '</span><span style="flex:1;min-width:0;">' + esc(x.ho_ten || '') + ' <span style="color:var(--text-muted);">· ' + esc(x.ma_nv) + '</span></span><b class="num" style="letter-spacing:1px;">' + esc(x.pin) + '</b></div>'; }).join('') + '</div>' +
+          (P.res.bo_qua ? '<div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Bỏ qua ' + P.res.bo_qua + ' người không thuộc phạm vi cấp.</div>' : '') +
+          '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;"><button class="btn btn-secondary" id="cpCopy">📋 Sao chép danh sách</button><button class="btn btn-primary" id="cpDone">Xong</button></div></div></div>';
+      }
+      if(P.loading) return h + '<div style="padding:22px;color:var(--text-muted);">Đang tải danh sách...</div></div></div>';
+      if(!P.rows) return h + '<div class="callout"><div>⚠️</div><div>' + esc(P.err || 'Không tải được danh sách.') + '</div></div></div></div>';
+      var rows = P.rows, phs = {}; rows.forEach(function(x){ phs[x.phong] = 1; });
+      var nSel = Object.keys(P.sel).length, nNo = rows.filter(function(x){ return !x.co_pin; }).length;
+      h += '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.55;">Chọn người cần cấp hoặc cấp lại PIN (CTV và nhân viên trong phạm vi của bạn). PIN bạn cấp chỉ dùng cho <b>lần đăng nhập đầu</b>, sau đó người được cấp bắt buộc đặt PIN riêng. PIN cũ của họ sẽ không dùng được nữa.</div>' +
+        '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;font-size:13px;">' +
+        '<label style="display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="radio" name="cpMode" value="chung"' + (P.mode === 'chung' ? ' checked' : '') + '> PIN chung</label>' +
+        '<input class="input" id="cpPin" inputmode="numeric" maxlength="6" value="' + esc(P.pin) + '" style="width:110px;' + (P.mode === 'chung' ? '' : 'display:none;') + '">' +
+        '<label style="display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="radio" name="cpMode" value="ngau"' + (P.mode === 'ngau' ? ' checked' : '') + '> Tạo ngẫu nhiên cho từng người</label></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"><input class="input" id="cpQ" type="search" autocomplete="off" spellcheck="false" placeholder="Tìm tên hoặc ID" value="' + esc(P.q || '') + '" style="flex:1;min-width:150px;">' +
+        (Object.keys(phs).length > 1 ? '<select class="select" id="cpPh"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === P.ph ? ' selected' : '') + '>' + esc(String(p).replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"><button class="btn btn-secondary btn-sm" id="cpAll">Chọn tất cả đang hiện</button>' + (nNo ? '<button class="btn btn-secondary btn-sm" id="cpNo">Chọn người chưa có PIN (' + nNo + ')</button>' : '') + '<button class="btn btn-secondary btn-sm" id="cpNone">Bỏ chọn</button></div>' +
+        '<div id="cpList" style="max-height:40vh;overflow:auto;border:1px solid var(--border);border-radius:10px;">' +
+        (rows.length ? rows.map(function(x){ return '<label class="cp-it" data-m="' + esc(x.ma_nv) + '" style="display:' + (cpShow(x, P) ? 'flex' : 'none') + ';gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><input type="checkbox" class="cp-ck" value="' + esc(x.ma_nv) + '"' + (P.sel[x.ma_nv] ? ' checked' : '') + ' style="width:16px;height:16px;flex:none;"><span style="flex:1;min-width:0;"><b>' + esc(x.ho_ten || '') + '</b> <span style="color:var(--text-muted);">· ' + esc(x.ma_nv) + ' · ' + esc(x.cap || '') + (Object.keys(phs).length > 1 ? ' · ' + esc(String(x.phong || '').replace(/^PHÒNG TVĐT /, '')) : '') + '</span></span>' + cpStat(x) + '</label>'; }).join('') : '<div style="padding:16px;color:var(--text-muted);">Không có ai để cấp PIN.</div>') + '</div>' +
+        (P.err ? '<div class="callout" style="margin-top:10px;"><div>⚠️</div><div>' + esc(P.err) + '</div></div>' : '') +
+        (P.ask ? '<div class="callout" style="margin-top:10px;background:#FFF7E6;border-color:#FDE3A7;"><div>⚠️</div><div>Cấp lại PIN cho <b>' + nSel + '</b> người' + (P.mode === 'chung' ? ' với PIN chung <b>' + esc(P.pin) + '</b>' : ' (PIN ngẫu nhiên)') + '. PIN cũ của họ sẽ không dùng được nữa. Bấm <b>Xác nhận</b> để cấp.</div></div>' : '') +
+        '<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;"><span style="flex:1;font-size:12.5px;color:var(--text-muted);">Đã chọn <b id="cpN">' + nSel + '</b> người</span>' +
+        (P.ask ? '<button class="btn btn-secondary" id="cpBack">Quay lại</button><button class="btn btn-primary" id="cpOk"' + (P.busy ? ' disabled' : '') + '>' + (P.busy ? 'Đang cấp...' : 'Xác nhận') + '</button>' : '<button class="btn btn-primary" id="cpGo">Cấp PIN</button>') + '</div></div></div>';
+      return h;
+    }
+    async function cpOpen(){
+      M.cp = {loading:true, rows:null, sel:{}, mode:'chung', pin:'123456', q:'', ph:'', err:'', ask:false, busy:false, res:null}; M.ed = null; M.add = null; draw('semp');
+      try {
+        var a = LIVE.memArgs(), r = await SBC.rpc('hr_tp_pin_ds', {p_ma:a.ma || null, p_pin:a.pin || null});
+        if(!M.cp) return;
+        if(r.error) throw r.error;
+        if(!r.data || !r.data.ok) M.cp.err = r.data && r.data.loi === 'khong_co_quyen' ? 'Chỉ trưởng phòng, giám đốc được cấp PIN.' : 'Phiên đăng nhập hết hạn, hãy đăng nhập lại.';
+        else M.cp.rows = r.data.rows || [];
+      } catch(e){ if(M.cp) M.cp.err = (e && e.code === 'PGRST202') ? 'Máy chủ chưa bật chức năng cấp PIN (cần chạy file tp_cap_pin.sql).' : dbErr(e); }
+      if(M.cp){ M.cp.loading = false; draw('semp'); }
+    }
+    function cpFilter(){
+      var P = M.cp; if(!P || !P.rows) return; var by = {}; P.rows.forEach(function(x){ by[x.ma_nv] = x; });
+      document.querySelectorAll('#sempContent .cp-it').forEach(function(el){ var x = by[el.getAttribute('data-m')]; el.style.display = x && cpShow(x, P) ? 'flex' : 'none'; });
+    }
+    function cpCount(){ var n = document.getElementById('cpN'); if(n && M.cp) n.textContent = Object.keys(M.cp.sel).length; }
+    async function cpSend(){
+      var P = M.cp; if(!P || P.busy) return;
+      var ds = Object.keys(P.sel); P.busy = true; P.err = ''; draw('semp');
+      try {
+        var a = LIVE.memArgs(), r = await SBC.rpc('hr_tp_cap_pin', {p_ma:a.ma || null, p_pin:a.pin || null, p_ds:ds, p_pin_chung:P.mode === 'chung' ? P.pin : null});
+        if(r.error) throw r.error;
+        if(!r.data || !r.data.ok){ var l = r.data && r.data.loi; P.err = l === 'pin_khong_hop_le' ? 'PIN chung phải đúng 6 chữ số.' : l === 'qua_nhieu' ? 'Mỗi lần cấp tối đa 300 người.' : l === 'khong_co_quyen' ? 'Chỉ trưởng phòng, giám đốc được cấp PIN.' : l === 'trong' ? 'Bạn chưa chọn ai.' : 'Không cấp được, hãy đăng nhập lại.'; P.busy = false; P.ask = false; draw('semp'); return; }
+        P.res = r.data; P.busy = false;
+        var done = {}; (r.data.rows || []).forEach(function(x){ done[x.ma_nv] = 1; }); P.rows.forEach(function(x){ if(done[x.ma_nv]){ x.co_pin = true; x.phai_doi = true; } });
+        draw('semp');
+      } catch(e){ P.err = (e && e.code === 'PGRST202') ? 'Máy chủ chưa bật chức năng cấp PIN (cần chạy file tp_cap_pin.sql).' : dbErr(e); P.busy = false; P.ask = false; draw('semp'); }
+    }
+    function cpCopy(){
+      var P = M.cp; if(!P || !P.res) return;
+      var txt = (P.res.rows || []).map(function(x){ return (x.ho_ten || '') + ' (' + x.ma_nv + '): ' + x.pin; }).join('\n') + '\n\nĐăng nhập app bằng ID + PIN trên, lần đầu app sẽ yêu cầu đặt PIN riêng.';
+      var ok = function(){ if(typeof toast === 'function') toast('Đã sao chép ' + (P.res.rows || []).length + ' dòng'); };
+      var fb = function(){ var ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px;top:0;'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch(x){} document.body.removeChild(ta); };
+      try { if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fb); else fb(); } catch(x){ fb(); }
+    }
     /* --- TP/GĐ thêm CTV mới vào phòng trong phạm vi --- */
     function addModal(){
       var F = M && M.add; if(!F) return '';
@@ -5333,8 +5424,8 @@ showView('view-lookup-login');
         var sk = (M.sort && M.sort.k) || '', sd = (M.sort && M.sort.d) || 1;
         if(sk) rows = rows.slice().sort(function(a, b){ var x = String(a[sk] == null ? '' : a[sk]), y = String(b[sk] == null ? '' : b[sk]); if(!x && y) return 1; if(x && !y) return -1; return sd * x.localeCompare(y, 'vi', {numeric:true}); });
         var thS = function(k, lb){ return '<th class="me-sort" data-k="' + k + '" style="cursor:pointer;white-space:nowrap;">' + lb + (sk === k ? (sd > 0 ? ' ▲' : ' ▼') : ' <span style="opacity:.35;">⇅</span>') + '</th>'; };
-        hh += '<div class="panel"><div class="panel-head" style="padding:14px 18px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhân sự (' + rows.length + ')' + (canEd ? ' <span style="font-weight:400;font-size:12.5px;color:var(--text-muted);">· bấm ＋ Bổ sung để điền thông tin còn thiếu</span>' : '') + '</div>' + (canEd ? '<button class="btn btn-primary" id="meAdd">＋ Thêm CTV</button>' : '') + LIVE.grpSelect('meG', M.grp) + (Object.keys(phs).length > 1 ? '<select class="select" id="meP"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === M.ph ? ' selected' : '') + '>' + esc(p.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + (ng2.length > 8 ? '<input class="input" id="meQ" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Tìm tên hoặc ID" value="' + esc(M.q || '') + '">' : '') + '</div><div class="panel-body me-wrap"><table class="me-tbl"><thead><tr><th>#</th>' + thS('ho_ten', 'Tên') + thS('ma_nv', 'ID') + thS('ma_nhan_su', 'Mã nhân sự') + thS('phong', 'Phòng') + thS('cap', 'Cấp') + (canEd ? thS('gioi_thieu', 'Người giới thiệu') + '<th></th>' : '') + '</tr></thead><tbody>' +
-          (rows.length ? rows.slice(0, 400).map(function(x, i){ return '<tr' + (canEd ? ' class="me-row" data-m="' + esc(x.ma_nv) + '" style="cursor:pointer;' + (x.ma_nv === M.ma || x.ma_nv === M.hl ? 'background:var(--accent-soft);' : '') + '"' : (x.ma_nv === M.ma ? ' style="background:var(--accent-soft);"' : '')) + '><td style="color:var(--text-muted);">' + (i + 1) + '</td><td style="white-space:nowrap;">' + esc(x.ho_ten) + (x.ma_nv === M.ma ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + '</td><td>' + esc(x.ma_nv) + '</td><td>' + esc(x.ma_nhan_su || '') + '</td><td style="white-space:nowrap;">' + esc((x.phong || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(x.cap) + '</td>' + (canEd ? '<td style="white-space:nowrap;">' + (x.gioi_thieu ? esc(x.gioi_thieu) + (x.ten_gt ? ' <span style="color:var(--text-muted);">· ' + esc(x.ten_gt) + '</span>' : '') : '<span style="color:var(--text-muted);">—</span>') + '</td><td style="text-align:right;"><button class="btn btn-secondary me-edbtn" style="padding:4px 12px;font-size:12px;">＋ Bổ sung</button></td>' : '') + '</tr>'; }).join('') : '<tr><td colspan="7" style="padding:16px;color:var(--text-muted);">Không có ai.</td></tr>') + '</tbody></table></div><div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);">' + scopeText() + (canEd ? ' Bạn thêm được CTV mới vào phòng mình và bổ sung ô còn trống; sửa dữ liệu đã có, lên cấp, đổi phòng, trạng thái do quản trị viên xử lý.' : ' Việc thêm người hoặc đổi phòng do quản trị viên xử lý.') + '</div></div>' + edModal() + addModal();
+        hh += '<div class="panel"><div class="panel-head" style="padding:14px 18px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">Nhân sự (' + rows.length + ')' + (canEd ? ' <span style="font-weight:400;font-size:12.5px;color:var(--text-muted);">· bấm ＋ Bổ sung để điền thông tin còn thiếu</span>' : '') + '</div>' + (canEd ? '<button class="btn btn-secondary" id="mePin">🔑 Cấp PIN</button><button class="btn btn-primary" id="meAdd">＋ Thêm CTV</button>' : '') + LIVE.grpSelect('meG', M.grp) + (Object.keys(phs).length > 1 ? '<select class="select" id="meP"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === M.ph ? ' selected' : '') + '>' + esc(p.replace(/^PHÒNG TVĐT /, '')) + '</option>'; }).join('') + '</select>' : '') + (ng2.length > 8 ? '<input class="input" id="meQ" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Tìm tên hoặc ID" value="' + esc(M.q || '') + '">' : '') + '</div><div class="panel-body me-wrap"><table class="me-tbl"><thead><tr><th>#</th>' + thS('ho_ten', 'Tên') + thS('ma_nv', 'ID') + thS('ma_nhan_su', 'Mã nhân sự') + thS('phong', 'Phòng') + thS('cap', 'Cấp') + (canEd ? thS('gioi_thieu', 'Người giới thiệu') + '<th></th>' : '') + '</tr></thead><tbody>' +
+          (rows.length ? rows.slice(0, 400).map(function(x, i){ return '<tr' + (canEd ? ' class="me-row" data-m="' + esc(x.ma_nv) + '" style="cursor:pointer;' + (x.ma_nv === M.ma || x.ma_nv === M.hl ? 'background:var(--accent-soft);' : '') + '"' : (x.ma_nv === M.ma ? ' style="background:var(--accent-soft);"' : '')) + '><td style="color:var(--text-muted);">' + (i + 1) + '</td><td style="white-space:nowrap;">' + esc(x.ho_ten) + (x.ma_nv === M.ma ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + '</td><td>' + esc(x.ma_nv) + '</td><td>' + esc(x.ma_nhan_su || '') + '</td><td style="white-space:nowrap;">' + esc((x.phong || '').replace(/^PHÒNG TVĐT /, '')) + '</td><td>' + esc(x.cap) + '</td>' + (canEd ? '<td style="white-space:nowrap;">' + (x.gioi_thieu ? esc(x.gioi_thieu) + (x.ten_gt ? ' <span style="color:var(--text-muted);">· ' + esc(x.ten_gt) + '</span>' : '') : '<span style="color:var(--text-muted);">—</span>') + '</td><td style="text-align:right;"><button class="btn btn-secondary me-edbtn" style="padding:4px 12px;font-size:12px;">＋ Bổ sung</button></td>' : '') + '</tr>'; }).join('') : '<tr><td colspan="7" style="padding:16px;color:var(--text-muted);">Không có ai.</td></tr>') + '</tbody></table></div><div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);">' + scopeText() + (canEd ? ' Bạn thêm được CTV mới vào phòng mình và bổ sung ô còn trống; sửa dữ liệu đã có, lên cấp, đổi phòng, trạng thái do quản trị viên xử lý.' : ' Việc thêm người hoặc đổi phòng do quản trị viên xử lý.') + '</div></div>' + edModal() + addModal() + cpModal();
         var oq = document.getElementById('meQ'), keepQ = oq && document.activeElement === oq;
         if(keepQ) oq.parentNode.removeChild(oq);
         el.innerHTML = hh;
@@ -5407,18 +5498,38 @@ showView('view-lookup-login');
     Object.keys(C).forEach(function(p){
       C[p].addEventListener('click', function(ev){ var mt = ev.target.closest('.lg-mtab'); if(mt && M && p === 'sluong'){ M.lgTab = mt.getAttribute('data-t'); draw('sluong'); return; } var br = ev.target.closest('.lg-bar'); if(br && M && p === 'sluong') loadLuong(br.getAttribute('data-k')); });
       var qT = null;
-      C[p].addEventListener('input', function(ev){ if(ev.target.id === 'meQ'){ M.q = ev.target.value; M.qf = true; if(ev.isComposing) return; clearTimeout(qT); qT = setTimeout(function(){ draw('semp'); }, 180); } });
+      C[p].addEventListener('input', function(ev){ if(M && M.cp){ if(ev.target.id === 'cpQ'){ M.cp.q = ev.target.value; cpFilter(); return; } if(ev.target.id === 'cpPin'){ M.cp.pin = String(ev.target.value).trim(); return; } } if(ev.target.id === 'meQ'){ M.q = ev.target.value; M.qf = true; if(ev.isComposing) return; clearTimeout(qT); qT = setTimeout(function(){ draw('semp'); }, 180); } });
       C[p].addEventListener('compositionend', function(ev){ if(ev.target.id === 'meQ'){ M.q = ev.target.value; clearTimeout(qT); qT = setTimeout(function(){ draw('semp'); }, 120); } });
-      C[p].addEventListener('change', function(ev){ if(!M) return; if(ev.target.id !== 'meQ') M.qf = false; if(ev.target.id === 'meP'){ M.ph = ev.target.value; draw('semp'); } else if(ev.target.id === 'meG'){ M.grp = ev.target.value; draw('semp'); } else if(ev.target.id === 'meKy') loadLuong(ev.target.value); });
+      C[p].addEventListener('change', function(ev){ if(!M) return; if(M.cp){ var P2 = M.cp, tg = ev.target; if(tg.classList.contains('cp-ck')){ if(tg.checked) P2.sel[tg.value] = 1; else delete P2.sel[tg.value]; cpCount(); return; } if(tg.name === 'cpMode'){ P2.mode = tg.value; var pi2 = document.getElementById('cpPin'); if(pi2) pi2.style.display = tg.value === 'chung' ? '' : 'none'; return; } if(tg.id === 'cpPh'){ P2.ph = tg.value; cpFilter(); return; } } if(ev.target.id !== 'meQ') M.qf = false; if(ev.target.id === 'meP'){ M.ph = ev.target.value; draw('semp'); } else if(ev.target.id === 'meG'){ M.grp = ev.target.value; draw('semp'); } else if(ev.target.id === 'meKy') loadLuong(ev.target.value); });
       C[p].addEventListener('click', function(ev){
         if(p !== 'semp' || !M) return;
         var t = ev.target, so = t.closest('.me-sort'); if(so){ var kk = so.getAttribute('data-k'); M.sort = (M.sort && M.sort.k === kk) ? {k:kk, d:-M.sort.d} : {k:kk, d:1}; draw('semp'); return; }
         if(t.closest('#meAdd')){ addOpen(); return; }
+        if(t.closest('#mePin')){ cpOpen(); return; }
+        if(M.cp){
+          var P = M.cp;
+          if(t.closest('#cpClose') || t.closest('#cpDone') || t.id === 'cpOv'){ M.cp = null; draw('semp'); return; }
+          if(t.closest('#cpCopy')){ cpCopy(); return; }
+          if(t.closest('#cpAll') || t.closest('#cpNo') || t.closest('#cpNone')){
+            if(t.closest('#cpNone')) P.sel = {};
+            else (P.rows || []).forEach(function(x){ if(t.closest('#cpNo') ? !x.co_pin : cpShow(x, P)) P.sel[x.ma_nv] = 1; });
+            document.querySelectorAll('#sempContent .cp-ck').forEach(function(c){ c.checked = !!P.sel[c.value]; }); cpCount(); return;
+          }
+          if(t.closest('#cpGo')){
+            var pi = document.getElementById('cpPin'); if(pi) P.pin = String(pi.value).trim();
+            if(!Object.keys(P.sel).length){ P.err = 'Bạn chưa chọn ai.'; draw('semp'); return; }
+            if(P.mode === 'chung' && !/^\d{6}$/.test(P.pin)){ P.err = 'PIN chung phải đúng 6 chữ số.'; draw('semp'); return; }
+            P.err = ''; P.ask = true; draw('semp'); return;
+          }
+          if(t.closest('#cpBack')){ P.ask = false; draw('semp'); return; }
+          if(t.closest('#cpOk')){ cpSend(); return; }
+          return;
+        }
         if(t.closest('#maSave')){ addSave(); return; }
         if(t.closest('#maCancel') || t.closest('#maCancel2') || t.id === 'maOv'){ M.add = null; draw('semp'); return; }
         if(t.closest('#meSave')){ edSave(); return; }
         if(t.closest('#meCancel') || t.closest('#meCancel2') || t.id === 'meOv'){ M.ed = null; draw('semp'); return; }
-        var rw = t.closest('.me-row'); if(rw && !M.ed && !M.add){ edOpen(rw.getAttribute('data-m')); }
+        var rw = t.closest('.me-row'); if(rw && !M.ed && !M.add && !M.cp){ edOpen(rw.getAttribute('data-m')); }
       });
       C[p].addEventListener('click', function(ev){ var b = ev.target.closest('.mem-go'); if(b){ var pg = b.getAttribute('data-p'); adminGo(pg); LIVE.memLoad(pg); if(pg === 'dsk' && LIVE.loadDsk) LIVE.loadDsk(); if(pg === 'lenh' && LIVE.loadLenh) LIVE.loadLenh(); } });
     });
@@ -5890,7 +6001,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.128';
+  var V = 'v3.129';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
