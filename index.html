@@ -1065,6 +1065,20 @@ button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;}
 #cnContent .foot button{margin-left:auto;border:1px solid var(--border);background:#fff;border-radius:6px;padding:4px 10px;font:600 12px Inter,sans-serif;cursor:pointer;color:var(--text);}
 #cnContent .warn{font-size:12px;color:var(--amber);}
 #cnContent .calc{padding:14px 16px;}
+#cnContent .psf{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+#cnContent .psf-c{padding:12px 14px;}
+#cnContent .psf-t{font-weight:700;margin-bottom:8px;color:var(--accent,#2563eb);}
+#cnContent .psf-l{font-size:13.5px;margin:4px 0;line-height:1.5;}
+#cnContent .psf-n{margin-top:8px;font-size:12px;line-height:1.5;}
+#cnContent .psf .t td,#cnContent .psv td{padding:6px 4px;font-size:13.5px;}
+#cnContent .psv{width:100%;margin-top:12px;}
+#cnContent .psv tr.hl td,#cnContent .psf tr.hl td{background:#eef4ff;}
+#cnContent .ps-round{margin-top:10px;padding:10px 12px;border-radius:10px;background:#fff7e6;border:1px solid #fde3a7;font-size:14px;}
+#cnContent .calc label.ps-moi{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--text,#111);}
+#cnContent .calc label.ps-moi input{width:18px;height:18px;min-width:0;padding:0;margin:0;flex:none;accent-color:#7c3aed;}
+#cnContent .calc label.ps-moi{padding-bottom:10px;}
+#cnContent .psf .t td.r{white-space:nowrap;}
+@media (max-width:820px){#cnContent .psf{grid-template-columns:1fr;}}
 #cnContent .calc .in{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;}
 #cnContent .calc label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;}
 #cnContent .calc input{height:38px;border:1.5px solid #B7AED6;border-radius:8px;padding:0 10px;font:600 16px Inter,sans-serif;width:150px;color:var(--text);}
@@ -3035,7 +3049,7 @@ showView('view-lookup-login');
       if(!d || !d.ok){ fail(d && d.loi === 'khoa' ? 'Bạn đã nhập sai nhiều lần. Thử lại sau ' + d.phut + ' phút.' : 'Mã nhân sự hoặc PIN chưa đúng.'); return; }
       err.style.display = 'none'; LIVE.portal = d; LIVE.portalPin = pin; document.getElementById('lkPin').value = '';
       if(LIVE.enterMember && !LIVE.isCtv(d.cap)){ LIVE.enterMember({kind:'pin', ma:d.ma_nv, pin:pin, name:d.ho_ten, cap:d.cap, phong:d.phong}); return; }
-      if(LIVE.enterMember){ try { var sv = await SBC.rpc('hr_pham_vi_xem', {p_ma:d.ma_nv, p_pin:pin}); if(!sv.error && sv.data && sv.data.ok && (sv.data.nguoi || []).length > 1){ LIVE.enterMember({kind:'pin', ma:d.ma_nv, pin:pin, name:d.ho_ten, cap:d.cap, phong:d.phong}); return; } } catch(x){} }
+      if(LIVE.enterMember){ LIVE.enterMember({kind:'pin', ma:d.ma_nv, pin:pin, name:d.ho_ten, cap:d.cap, phong:d.phong}); return; }
       showView('view-lookup-portal'); renderLivePortal();
     } catch(e){ fail('Không kết nối được máy chủ. Thử lại sau.'); }
   };
@@ -5087,7 +5101,7 @@ showView('view-lookup-login');
     }
     LIVE.startPreview = function(code){
       var e = (LIVE.emp || []).filter(function(x){ return x.code === code; })[0]; if(!e) return;
-      if(!LIVE.isCtv(e.level) || scopeOf(e).nguoi.length > 1){ LIVE.enterMember({kind:'person', preview:true, ma:e.code, name:e.name, cap:e.level, phong:e.dept}); return; }
+      if(LIVE.enterMember){ LIVE.enterMember({kind:'person', preview:true, ma:e.code, name:e.name, cap:e.level, phong:e.dept}); return; }
       LIVE.portal = {ma_nv:e.code, ho_ten:e.name, cap:e.level, phong:e.dept, ma_nhan_su:e.msn || null};
       LIVE.portalPin = null; LIVE.preview = true; LIVE.previewScope = scopeOf(e);
       document.getElementById('view-lookup-portal').classList.add('preview-mode');
@@ -5158,7 +5172,7 @@ showView('view-lookup-login');
       var box = document.createElement('div'); box.id = id;
       items.forEach(function(it){
         if(it === '-'){ var l = document.createElement('div'); l.className = 'nav-sec'; l.textContent = 'Quản trị'; box.appendChild(l); return; }
-        var d = document.createElement('div'); d.className = 'nav-item' + (it[0] === 'sbc' && !adminMode ? ' only-leader' : '') + (it[0] === 'sluong' && !adminMode ? ' only-leader' : '') + (it[0] === 'cn' && !adminMode ? ' only-mgr' : ''); d.setAttribute('data-mem', '1');
+        var d = document.createElement('div'); d.className = 'nav-item' + (it[0] === 'sbc' && !adminMode ? ' only-leader' : '') + (it[0] === 'sluong' && !adminMode ? ' only-leader' : ''); d.setAttribute('data-mem', '1');
         if(it[0] !== 'ct') d.setAttribute('data-page', it[0]);
         d.innerHTML = (ICO[it[0]] || ICO.dsk) + ' ' + it[1];
         d.addEventListener('click', function(){
@@ -5876,7 +5890,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.126';
+  var V = 'v3.128';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
@@ -7186,7 +7200,7 @@ var BLK = {
   ks:{title:'Chính sách ký quỹ chung (từ 12/02/2026)', t:'tiles', st:'ks', items:[{v:'90 ngày', l:'thời hạn vay tối đa, có thể gia hạn'}, {v:'1 ngày', l:'miễn lãi, tính từ ngày giải ngân'}, {v:'150%', l:'lãi quá hạn so với lãi trong hạn'}, {v:'35%', l:'tỷ lệ ký quỹ duy trì'}, {v:'30%', l:'tỷ lệ ký quỹ xử lý'}, {v:'1 ngày làm việc', l:'VPS báo trước khi đổi lãi suất'}]},
   luuy:{title:'Lưu ý chung', t:'list', items:['Không áp dụng đồng thời nhiều chương trình ưu đãi lãi suất.', 'Dư nợ vượt hạn mức ưu đãi tính theo lãi suất cơ bản từng thời kỳ.', 'VPS có quyền điều chỉnh hoặc chấm dứt chương trình mà không báo trước.']},
   psLai:{title:'Lãi suất phái sinh (%/năm)', t:'tiles', items:[{v:'10%', l:'Lãi phạt Plus++ trong ngày (H1)'}, {v:'18%', l:'Lãi phạt Plus++ qua đêm (H1)'}, {v:'18%', l:'Phí ứng trước ký quỹ (H1)'}]},
-  psCfg:{title:'Thông số dùng để tính (ký quỹ, thuế, phí phái sinh)', t:'nums', items:[['hs', 'Hệ số nhân (đồng/điểm)', 100000], ['kq', 'Tỷ lệ ký quỹ ban đầu (%)', 17], ['ar', 'Giới hạn sử dụng tài sản ký quỹ (%)', 80], ['so', 'Phí trả Sở (đồng/HĐ)', 2700], ['bt', 'Phí bù trừ (đồng/HĐ)', 2550], ['th', 'Thuế TNCN (%)', 0.1]]},
+  psCfg:{title:'Thông số dùng để tính (ký quỹ, thuế, phí phái sinh)', t:'nums', items:[['hs', 'Hệ số nhân (đồng/điểm)', 100000], ['kq', 'Tỷ lệ ký quỹ ban đầu (%)', 17], ['ar', 'Giới hạn sử dụng tài sản ký quỹ (%)', 80], ['so', 'Phí trả Sở (đồng/HĐ)', 2700], ['bt', 'Phí bù trừ (đồng/HĐ)', 2550], ['th', 'Thuế TNCN (%)', 0.1], ['vps', 'Phí VPS dưới 200 HĐ/ngày (đồng/HĐ)', 2000], ['vps2', 'Phí VPS từ 200 HĐ/ngày (đồng/HĐ)', 1000], ['mien', 'KH mới: số HĐ miễn phí VPS mỗi ngày', 20], ['vpsm', 'KH mới: phí VPS từ HĐ vượt mức miễn (đồng/HĐ)', 1000]]},
   psNg:{title:'Ngưỡng cần theo dõi', t:'tiles', items:[{v:'> 10%', l:'Tỷ lệ tài khoản, trước 2h'}, {v:'> 33%', l:'Tỷ lệ tài khoản, sau 2h'}, {v:'< 80%', l:'Tỷ lệ sử dụng tài sản ký quỹ'}]},
   psH:{title:'Gói sản phẩm: H1 và H2', t:'table', h:['', 'New Plus++ (H1)', 'PS thường (H2)'], r:[['Dùng khi', 'KH cần thêm sức mua tự động, không phải đề nghị từng lần', 'KH giao dịch thông thường'], ['Hoàn trả', 'Đề nghị qua kênh online; cuối ngày tự hoàn trả nếu dư tiền', '—'], ['Chuyển từ Plus++ cũ', 'KH đã ký cập nhật Plus++, hoặc đã phát sinh Plus++ (đến 28/11/2025)', 'KH chưa ký cập nhật và chưa phát sinh tiền Plus++'], ['Lãi Plus++ trong ngày', '10%/năm', '—'], ['Lãi Plus++ qua đêm', '18%/năm', '—'], ['Ứng trước ký quỹ', '18%/năm', '—'], ['Khi nào tính lãi phạt', 'Khi KH khớp lệnh, hoặc theo số hợp đồng nắm giữ qua đêm', '—'], ['Hoa hồng Plus++', 'Sales không được hưởng', '—']]},
   dn:{title:'Tỷ lệ hoa hồng dư nợ', t:'nums', items:[['cs', 'Hoa hồng dư nợ cơ sở (%)', 3.57], ['csMin', 'Lãi suất KH thực trả tối thiểu (%)', 13], ['ps', 'Hoa hồng dư nợ phái sinh (%)', 0.45]]},
@@ -7319,8 +7333,20 @@ var TP = {gia:1420, so:1};
 function tpHtml(){ var C = NUM('psCfg'), thue = TP.gia * C.hs * TP.so * C.kq / 100 / 2 * C.th / 100, so = C.so * TP.so, bt = C.bt * TP.so; return '<div class="base" style="margin-top:12px;"><div class="panel b"><div class="l">Thuế TNCN</div><div class="v" style="font-size:18px;">' + tien(thue) + ' <small>đ</small></div></div><div class="panel b"><div class="l">Phí Sở + phí bù trừ</div><div class="v" style="font-size:18px;">' + tien(so + bt) + ' <small>đ</small></div></div><div class="panel b" style="border-color:var(--accent);"><div class="l">Tổng 1 lượt (chưa gồm phí VPS)</div><div class="v" style="font-size:18px;color:var(--accent-dark);">' + tien(thue + so + bt) + ' <small>đ</small></div></div></div>'; }
 function thueBang(nh){ return '<div class="panel tb">' + THUE[nh].map(function(r, i){ var sc = r.s && SRC[r.s]; return '<div class="tr"><div class="tk"><b>' + esc(r.k) + '</b></div><div class="tm">' + esc(r.m) + '</div><div class="tg">' + esc(r.g) + (r.c ? ' <span class="warn">Cần đối chiếu lại.</span>' : '') + '<div class="ts">Nguồn: ' + (sc ? '<a href="' + sc[1] + '" target="_blank" rel="noopener">' + sc[0] + '</a>' : esc(r.n || '')) + '</div></div><button class="lk" data-te="' + nh + ':' + i + '">Sửa</button></div>'; }).join('') + '</div><button class="lk" data-te="' + nh + ':">＋ Thêm khoản</button>'; }
 function thieu(L){ return '<div class="panel" style="padding:6px 8px;"><table class="t"><tr><th>Khoản</th><th>Mức</th><th>Ghi chú</th></tr>' + L.map(function(x){ return '<tr><td>' + x + '</td><td class="warn">Chưa có số liệu</td><td></td></tr>'; }).join('') + '</table></div>'; }
-var PS = {gia:1420, so:1};
-function psHtml(){ var C = NUM('psCfg'), gt = PS.gia * C.hs * PS.so, kq = gt * C.kq / 100, nop = kq / (C.ar / 100); return '<div class="base" style="margin-top:12px;"><div class="panel b"><div class="l">Giá trị hợp đồng</div><div class="v" style="font-size:18px;">' + tien(gt) + ' <small>đ</small></div></div><div class="panel b"><div class="l">Ký quỹ ban đầu (' + pc(C.kq) + ')</div><div class="v" style="font-size:18px;">' + tien(kq) + ' <small>đ</small></div></div><div class="panel b" style="border-color:var(--accent);"><div class="l">Tiền tối thiểu cần nộp (' + pc(sv(Math.round(C.kq / C.ar * 10000) / 100)) + ')</div><div class="v" style="font-size:18px;color:var(--accent-dark);">' + tien(nop) + ' <small>đ</small></div></div></div>'; }
+var PS = {gia:1849, so:1, moi:false};
+function psC(){ var C = NUM('psCfg'), D = {hs:100000, kq:17, ar:80, so:2700, bt:2550, th:0.1, vps:2000, vps2:1000, mien:20, vpsm:1000}; Object.keys(D).forEach(function(k){ if(C[k] == null || isNaN(C[k])) C[k] = D[k]; }); return C; }
+function psCalc(){ var C = psC(), n = PS.so, gt = PS.gia * C.hs * n, kq = gt * C.kq / 100, nop = kq / (C.ar / 100);
+  var vps = PS.moi ? Math.max(0, n - C.mien) * C.vpsm : (n >= 200 ? C.vps2 : C.vps) * n, so = C.so * n, bt = C.bt * n, phi = vps + so + bt, thue = gt * C.kq / 100 / 2 * C.th / 100;
+  return {C:C, gt:gt, kq:kq, nop:nop, vps:vps, so:so, bt:bt, phi:phi, thue:thue, tong:phi + thue}; }
+function psHtml(){ var r = psCalc(), C = r.C, n = PS.so, row = function(l, v, hl, sub){ return '<tr' + (hl ? ' class="hl"' : '') + '><td>' + l + (sub ? '<div class="sub" style="font-size:11.5px;">' + sub + '</div>' : '') + '</td><td class="r"><b>' + v + '</b></td></tr>'; };
+  return '<table class="t psv">' + row('Giá trị hợp đồng', tien(r.gt) + ' đ') + row('Ký quỹ ban đầu (' + pc(C.kq) + ')', tien(r.kq) + ' đ') + row('Tiền tối thiểu cần nộp', tien(r.nop) + ' đ', true, 'Nên nộp dư để có khoảng đệm') +
+    row('Phí VPS', tien(r.vps) + ' đ', false, PS.moi ? 'KH mới: miễn ' + C.mien + ' HĐ đầu/ngày' : (n >= 200 ? 'Từ 200 HĐ/ngày: ' + tien(C.vps2) + ' đ/HĐ' : tien(C.vps) + ' đ/HĐ')) + row('Phí trả Sở', tien(r.so) + ' đ') + row('Phí bù trừ VSD', tien(r.bt) + ' đ') + row('Tổng phí', tien(r.phi) + ' đ/chiều', true) +
+    row('Thuế TNCN', '≈ ' + tien(r.thue) + ' đ/chiều', false, 'Thu cả khi lỗ') + row('Tổng phí + thuế', '≈ ' + tien(r.tong) + ' đ/chiều', true) + '</table><div class="ps-round">Cả vòng mở + đóng: <b>≈ ' + tien(r.tong * 2) + ' đ</b></div>'; }
+function psFormula(){ var C = psC(), b = function(x){ return '<b>' + x + '</b>'; }, nopPct = sv(Math.round(C.kq / C.ar * 10000) / 100);
+  return '<div class="sec">Công thức phái sinh VN30 · tính cho 1 hợp đồng, hệ số nhân ' + tien(C.hs) + ' đ/điểm</div><div class="psf">' +
+    '<div class="panel psf-c"><div class="psf-t">1. Tiền cần có</div><div class="psf-l">Giá trị HĐ = ' + b('Giá HĐ × ' + tien(C.hs) + ' × Số HĐ') + '</div><div class="psf-l">Ký quỹ ban đầu = ' + b('Giá trị HĐ × ' + pc(C.kq)) + '</div><div class="psf-l">Tiền tối thiểu cần nộp = ' + b('Ký quỹ ban đầu ÷ ' + pc(C.ar)) + ' <span class="sub">(= ' + nopPct + '% giá trị HĐ)</span></div><div class="sub psf-n">Nộp đúng mức tối thiểu là sát ngưỡng ' + pc(C.ar) + ' tài sản ký quỹ, nên nộp dư để có khoảng đệm.</div></div>' +
+    '<div class="panel psf-c"><div class="psf-t">2. Phí (mỗi chiều mở hoặc đóng)</div><table class="t"><tr><td>Phí VPS <span class="sub">(từ 200 HĐ/ngày: ' + tien(C.vps2) + ' đ)</span></td><td class="r"><b>' + tien(C.vps) + ' đ</b></td></tr><tr><td>Phí trả Sở</td><td class="r"><b>' + tien(C.so) + ' đ</b></td></tr><tr><td>Phí bù trừ VSD</td><td class="r"><b>' + tien(C.bt) + ' đ</b></td></tr><tr class="hl"><td>Tổng phí</td><td class="r"><b>' + tien(C.vps + C.so + C.bt) + ' đ/chiều</b></td></tr></table><div class="sub psf-n">KH mới 3 tháng đầu: miễn phí VPS ' + C.mien + ' HĐ đầu/ngày, từ HĐ ' + (C.mien + 1) + ': ' + tien(C.vpsm) + ' đ/HĐ.<br>Phí quản lý tài sản ký quỹ VSD thu theo tháng: tối thiểu 100.000 đ, tối đa 1.600.000 đ/tài khoản.</div></div>' +
+    '<div class="panel psf-c"><div class="psf-t">3. Thuế TNCN (mỗi chiều, thu cả khi lỗ)</div><div class="psf-l">Thuế = ' + b(sv(C.th) + '% × Giá HĐ × ' + tien(C.hs) + ' × Số HĐ × ' + pc(C.kq) + ' ÷ 2') + '</div><div class="sub psf-n">Cách nhớ: thuế cả vòng mở + đóng = ' + sv(C.th) + '% số tiền ký quỹ ban đầu.</div></div></div>'; }
 function view(){
   if(TAB === 'ls') return '<div class="sec">Lãi suất cơ bản (%/năm) <button class="lk" id="bEd">Sửa</button></div><div class="base">' + BASE.map(function(b){ return '<div class="panel b"><div class="v">' + pc(b.v).replace('%', '') + '<small>%</small></div><div class="l">' + b.l + '</div></div>'; }).join('') + '</div>' +
     blkH('ks') + '<div class="sec">KH cần gì? Bấm để xem gói</div><div class="pick">' + GOI.map(function(g){ var b = g.buoc || (g.bien && g.bien[0].buoc); return '<button data-go="' + g.id + '"><div class="n">' + esc(g.dung) + '</div><div class="g">→ ' + g.ten + ' <span class="r">' + (b ? pc(b[0].ls) : 'từ ' + g.tu + '%') + '</span> <span class="tag ' + g.tk.toLowerCase() + '">' + g.tk + '</span></div></button>'; }).join('') + '</div>' +
@@ -7331,7 +7357,7 @@ function view(){
   if(TAB === 'cu') return '<div class="sub" style="margin-bottom:10px;">Các gói vay đã ngừng áp dụng được giữ lại ở đây để tra cứu. Bấm vào gói để xem lại đầy đủ lãi suất, hạn mức, điều kiện lúc còn áp dụng.</div>' + (CU.length ? CU.map(function(g){ return dong(g, true); }).join('') : '<div class="panel" style="padding:22px;text-align:center;color:var(--muted);">Chưa có gói nào ngừng áp dụng.<br>Thử: vào Lãi suất &amp; gói vay cơ sở, mở một gói rồi bấm "Ngừng áp dụng".</div>');
   if(TAB === 'thue') return '<div class="try" style="margin-top:0;">Thuế theo văn bản pháp luật (tra ngày 10/11/2026). Phí theo biểu phí trên website VPS (đọc ngày 06/11/2026). Dòng ghi "Cần đối chiếu lại" là thông tin chưa xác nhận với văn bản gốc.</div>' + sub('Cơ sở') + thueBang('cs') + sub('Phái sinh') + thueBang('ps') + '<div class="sub">Phí giao dịch của VPS xem ở mục Phí giao dịch.</div>' + sub('Tài khoản và chuyển tiền') + thueBang('tk') + '<div class="sec">Tính thử thuế, phí 1 lượt giao dịch phái sinh</div><div class="panel calc"><div class="in"><label>Giá hợp đồng (điểm)<input id="qGia" inputmode="decimal" value="' + TP.gia + '"></label><label>Số hợp đồng<input id="qSo" class="s" inputmode="numeric" value="' + TP.so + '"></label><div class="sub" style="flex:1;min-width:200px;">1 lượt = 1 lần khớp mua hoặc bán. Tỷ lệ ký quỹ ban đầu ' + pc(NUM('psCfg').kq) + '. Mở rồi đóng vị thế là 2 lượt. Thông số sửa ở mục Lãi suất & gói vay phái sinh.</div></div><div id="tpRes">' + tpHtml() + '</div></div>';
   var C = NUM('psCfg');
-  return blkH('psLai') + '<div class="sec">Tính ký quỹ hợp đồng tương lai VN30</div><div class="panel calc"><div class="in"><label>Giá hợp đồng (điểm)<input id="pGia" inputmode="decimal" value="' + PS.gia + '"></label><label>Số hợp đồng<input id="pSo" class="s" inputmode="numeric" value="' + PS.so + '"></label><div class="sub" style="flex:1;min-width:200px;">Hệ số nhân ' + tien(C.hs) + ' đ/điểm · ký quỹ ' + pc(C.kq) + ' · chỉ dùng tối đa ' + pc(C.ar) + ' tài sản ký quỹ.</div></div><div id="psRes">' + psHtml() + '</div></div>' + blkH('psCfg') + blkH('psNg') + blkH('psH');
+  return blkH('psLai') + psFormula() + '<div class="sec">Tính thử: tiền cần nộp, phí và thuế</div><div class="panel calc"><div class="in"><label>Giá hợp đồng (điểm)<input id="pGia" inputmode="decimal" value="' + sv(PS.gia) + '"></label><label>Số hợp đồng<input id="pSo" class="s" inputmode="numeric" value="' + PS.so + '"></label><label class="ps-moi"><input type="checkbox" id="pMoi"' + (PS.moi ? ' checked' : '') + '> KH mới (3 tháng đầu)</label></div><div id="psRes">' + psHtml() + '</div></div>' + blkH('psCfg') + blkH('psNg') + blkH('psH');
 }
 /* ===== CHÍNH SÁCH NHÂN SỰ ===== */
 var GROUP = 'kh', EDIT = false;
@@ -7487,7 +7513,7 @@ box.addEventListener('click', function(e){
   else if(t.id === 'tOk'){ if(!gv('tK').trim() || !gv('tM').trim()){ $i('eErr').textContent = 'Cần nhập tên khoản và mức.'; return; } var o = TE.i == null ? {} : THUE[TE.nh][TE.i]; o.k = gv('tK').trim(); o.m = gv('tM').trim(); o.g = gv('tG').trim(); var nw = TE.i == null; if(nw){ o.n = 'Tự nhập ' + hom(); THUE[TE.nh].push(o); } closeM(); draw(); save(['thue'], (nw ? 'Thêm khoản ' : 'Sửa khoản ') + o.k); }
   else if(t.id === 'tDel'){ var nt = THUE[TE.nh][TE.i].k; THUE[TE.nh].splice(TE.i, 1); closeM(); draw(); save(['thue'], 'Xóa khoản ' + nt); }
 });
-box.addEventListener('change', function(e){ if(e.target.id === 'nCap'){ NS.cap = e.target.value; NS.luong = capOf(NS.cap).l0; ladAuto(); draw(); return; } if(BUSY || !ED) return; if(e.target.id === 'eLoai' || e.target.id === 'eCot'){ edRead(); edDraw(); } });
+box.addEventListener('change', function(e){ if(e.target.id === 'pMoi'){ PS.moi = e.target.checked; $i('psRes').innerHTML = psHtml(); return; } if(e.target.id === 'nCap'){ NS.cap = e.target.value; NS.luong = capOf(NS.cap).l0; ladAuto(); draw(); return; } if(BUSY || !ED) return; if(e.target.id === 'eLoai' || e.target.id === 'eCot'){ edRead(); edDraw(); } });
 box.addEventListener('input', function(e){
   var n = parseFloat(String(e.target.value).replace(/\./g, '').replace(',', '.'));
   if(e.target.id === 'iNo' || e.target.id === 'iNg'){ if(n > 0){ IN[e.target.id === 'iNo' ? 'no' : 'ngay'] = n; $i('res').innerHTML = calcHtml(); } }
@@ -7529,7 +7555,7 @@ box.addEventListener('input', function(e){
     try {
       var r = await SBC.rpc('hr_cn2_goi', args());
       if(r.error){ if(r.error.code === 'PGRST202' || /Could not find|does not exist/i.test(r.error.message || '')) C.setup = false; else throw r.error; }
-      else if(!r.data || !r.data.ok){ C.err = r.data && r.data.loi === 'khong_co_quyen' ? 'Cẩm nang chỉ dành cho cấp quản lý (Trưởng phòng trở lên).' : 'Phiên đăng nhập hết hạn, hãy đăng nhập lại.'; C.loaded = false; }
+      else if(!r.data || !r.data.ok){ C.err = 'Phiên đăng nhập hết hạn, hãy đăng nhập lại.'; C.loaded = false; }
       else { C.setup = true; C.sua = !!r.data.sua; C.ls = r.data.ls || []; C.capNhat = r.data.cap_nhat; applyAll(r.data.data); C.loaded = true; }
     } catch(e){ C.err = dbErr(e); }
     C.loading = false; draw();
