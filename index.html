@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HRM · Nhân sự &amp; KPI</title>
 <style>
+.kvw input.kv-anck{width:15px;height:15px;margin:0 3px 0 0;vertical-align:-3px;cursor:pointer;accent-color:#7c3aed;}
 
 :root{
   --bg:#EFEBF7;
@@ -4243,7 +4244,7 @@ showView('view-lookup-login');
         });
         var showAn = LIVE.anShowNow(), nAn = 0;
         var meId = String(me || (S.data && S.data.me && S.data.me.ma_nv) || (LIVE.member && LIVE.member.ma) || '').toUpperCase();
-        persons.forEach(function(x){ x.an = !!LIVE.anDs[x.n.ma_nv] && !x.me && String(x.n.ma_nv).toUpperCase() !== meId; if(x.an) nAn++; });
+        persons.forEach(function(x){ x.self = x.me || String(x.n.ma_nv).toUpperCase() === meId; x.an = !!LIVE.anDs[x.n.ma_nv] && !x.self; if(x.an) nAn++; });
         return {agg:agg, persons:showAn ? persons : persons.filter(function(x){ return !x.an; }), all:persons, nAn:nAn, showAn:showAn, phongs:phongs};
       };
       /* số liệu tổng cả kỳ (dùng cho Dashboard) */
@@ -4432,7 +4433,7 @@ showView('view-lookup-login');
             msel('cap', 'Mọi chức danh', 'chức danh', Object.keys(CFG.levels).map(function(l){ return {v:l, t:l}; }), S.cap) +
             '<select class="select" id="kvSt"><option value="">Đạt + chưa đạt</option><option value="dat"' + (S.st === 'dat' ? ' selected' : '') + '>Đạt</option><option value="chua"' + (S.st === 'chua' ? ' selected' : '') + '>Chưa đạt</option></select>' +
             (D.nguoi.length > 8 ? '<input class="input" id="kvQ" placeholder="Tìm tên hoặc ID" value="' + esc(S.q) + '">' : '') + '<button class="btn btn-secondary" id="kvXls">Tải Excel</button><button class="btn btn-secondary" id="kvShot" title="Chụp ảnh toàn bộ bảng để gửi">📷 Chụp ảnh</button></div><div class="panel-body">' + shareHtml(base0) + '<table class="kvt kvt-ca"><thead><tr><th>#</th>' + th('ca', 'ten', 'Tên') + th('ca', 'id', 'ID') + th('ca', 'phong', 'Phòng') + th('ca', 'tot', 'Tổng KPI') + th('ca', 'hh', 'Hoa hồng tạm tính', 'Cơ sở × 65% + Phái sinh × 40%. Bấm vào từng người để xem chi tiết Cơ sở, Phái sinh, Giải chấp, Miễn phí') + th('ca', 'tg', 'Chỉ tiêu') + th('ca', 'mt', 'Còn thiếu', 'Chỉ tiêu trừ Tổng KPI hiện tại') + th('ca', 'pct', 'Kết quả', 'Đạt / Chưa đạt kèm % hoàn thành') + th('ca', 'nx', 'KPI tiếp theo', 'Khi đã đạt chỉ tiêu: chức danh kế tiếp và số KPI còn thiếu để lên. Trưởng phòng tính theo KPI cả phòng') + '</tr></thead><tbody>' +
-            (list.length ? list.slice(0, 1500).map(function(x, ix){ var v = x.v; return '<tr class="kv-ca" data-id="' + esc(x.n.ma_nv) + '" data-bk="' + esc(bkAttr(v, x.tot)) + '" style="cursor:pointer;' + (x.me ? 'background:var(--accent-soft);' : '') + '" title="Bấm để xem chi tiết Cơ sở, Phái sinh, Giải chấp, Miễn phí"><td class="sub">' + (ix + 1) + '</td><td style="white-space:nowrap;"><b class="nm">' + esc(x.n.ho_ten) + '</b>' + (x.an ? ' <span title="Đã ẩn doanh số, người ngoài không thấy dòng này">🙈</span>' : '') + (x.me ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + ' <span class="sub" style="font-size:11px;">' + esc(x.n.cap) + '</span></td><td class="sub">' + esc(x.n.ma_nv) + '</td><td class="sub" style="white-space:nowrap;">' + esc(short(x.n.phong)) + '</td><td class="num tot">' + money(x.tot) + '</td>' + hcCell(x) + '<td class="num sub"' + (x.rg ? ' title="Chỉ tiêu riêng (đã đặt khác chỉ tiêu theo cấp)" style="color:var(--accent-dark);font-weight:600;"' : '') + '>' + (x.tg ? money(x.tg) : '—') + (x.rg ? ' ✎' : '') + '</td><td class="num" style="white-space:nowrap;' + (thieu(x) > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--text-muted);') + '">' + (thieu(x) == null ? '' : thieu(x) > 0 ? money(thieu(x)) : '-') + '</td><td class="pctc">' + kqCell(x) + '</td>' + nxCell(nxOf(x, LAD2, LADN, C)) + '</tr>' + (S.openCa === String(x.n.ma_nv) ? '<tr class="kv-dt"><td colspan="10"><div class="kv-dbox"><div class="kv-dh"><b>' + esc(x.n.ho_ten) + '</b> · ' + esc(x.n.cap) + ' · chi tiết KPI</div>' + detHtml(v, x.tot, (function(){ var o = nxOf(x, LAD2, LADN, C); return mxHtml([['Hoa hồng tạm tính', money(hoaHong(x))], ['Chỉ tiêu', x.tg ? money(x.tg) : '—'], ['Còn thiếu', thieu(x) > 0 ? money(thieu(x)) : '—'], ['Kết quả', x.pct == null ? '—' : (fullNow() ? (x.dat ? 'Đạt' : 'Chưa đạt') + ' · ' : '') + viNum(x.pct * 100, 1) + '%'], ['KPI tiếp theo', !o ? '—' : o.max ? 'Mức cao nhất' : esc(o.l) + ' · thiếu ' + money(o.gap)]]); })() + '<div class="kv-dx">Hoa hồng tạm tính = Cơ sở ' + money(v.cs) + ' × 65% + Phái sinh ' + money(v.ps) + ' × 40% = <b style="color:#047857;">' + money(hoaHong(x)) + '</b>' + (v.cl ? '<br>Phí chia sẻ ' + money(v.cl) + ' đã nằm trong Cơ sở, chỉ để xem.' : '') + '</div>') + '</div></td></tr>' : ''); }).join('') : '<tr><td colspan="10" style="padding:16px;color:var(--text-muted);">Không có ai khớp bộ lọc.</td></tr>') +
+            (list.length ? list.slice(0, 1500).map(function(x, ix){ var v = x.v; return '<tr class="kv-ca" data-id="' + esc(x.n.ma_nv) + '" data-bk="' + esc(bkAttr(v, x.tot)) + '" style="cursor:pointer;' + (x.me ? 'background:var(--accent-soft);' : '') + '" title="Bấm để xem chi tiết Cơ sở, Phái sinh, Giải chấp, Miễn phí"><td class="sub">' + (ix + 1) + '</td><td style="white-space:nowrap;">' + (canPhong() && !x.self ? '<input type="checkbox" class="kv-anck" data-m="' + esc(x.n.ma_nv) + '"' + (x.an ? ' checked' : '') + ' title="' + (x.an ? 'Bỏ tích để hiện lại doanh số người này' : 'Tích để ẩn doanh số người này khỏi danh sách') + '"> ' : '') + '<b class="nm">' + esc(x.n.ho_ten) + '</b>' + (x.an ? ' <span title="Đã ẩn doanh số, người ngoài không thấy dòng này">🙈</span>' : '') + (x.me ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + ' <span class="sub" style="font-size:11px;">' + esc(x.n.cap) + '</span></td><td class="sub">' + esc(x.n.ma_nv) + '</td><td class="sub" style="white-space:nowrap;">' + esc(short(x.n.phong)) + '</td><td class="num tot">' + money(x.tot) + '</td>' + hcCell(x) + '<td class="num sub"' + (x.rg ? ' title="Chỉ tiêu riêng (đã đặt khác chỉ tiêu theo cấp)" style="color:var(--accent-dark);font-weight:600;"' : '') + '>' + (x.tg ? money(x.tg) : '—') + (x.rg ? ' ✎' : '') + '</td><td class="num" style="white-space:nowrap;' + (thieu(x) > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--text-muted);') + '">' + (thieu(x) == null ? '' : thieu(x) > 0 ? money(thieu(x)) : '-') + '</td><td class="pctc">' + kqCell(x) + '</td>' + nxCell(nxOf(x, LAD2, LADN, C)) + '</tr>' + (S.openCa === String(x.n.ma_nv) ? '<tr class="kv-dt"><td colspan="10"><div class="kv-dbox"><div class="kv-dh"><b>' + esc(x.n.ho_ten) + '</b> · ' + esc(x.n.cap) + ' · chi tiết KPI</div>' + detHtml(v, x.tot, (function(){ var o = nxOf(x, LAD2, LADN, C); return mxHtml([['Hoa hồng tạm tính', money(hoaHong(x))], ['Chỉ tiêu', x.tg ? money(x.tg) : '—'], ['Còn thiếu', thieu(x) > 0 ? money(thieu(x)) : '—'], ['Kết quả', x.pct == null ? '—' : (fullNow() ? (x.dat ? 'Đạt' : 'Chưa đạt') + ' · ' : '') + viNum(x.pct * 100, 1) + '%'], ['KPI tiếp theo', !o ? '—' : o.max ? 'Mức cao nhất' : esc(o.l) + ' · thiếu ' + money(o.gap)]]); })() + '<div class="kv-dx">Hoa hồng tạm tính = Cơ sở ' + money(v.cs) + ' × 65% + Phái sinh ' + money(v.ps) + ' × 40% = <b style="color:#047857;">' + money(hoaHong(x)) + '</b>' + (v.cl ? '<br>Phí chia sẻ ' + money(v.cl) + ' đã nằm trong Cơ sở, chỉ để xem.' : '') + '</div>') + '</div></td></tr>' : ''); }).join('') : '<tr><td colspan="10" style="padding:16px;color:var(--text-muted);">Không có ai khớp bộ lọc.</td></tr>') +
             (list.length ? (function(){ var Z = ZERO(), cl = 0, mt = 0; Z.hh = 0; list.forEach(function(x){ if(thieu(x) > 0) mt += thieu(x); Z.hh += hoaHong(x); Z.cs += x.v.cs; Z.ps += x.v.ps; Z.gc += x.v.gc; Z.mf += x.v.mf; cl += x.v.cl; }); return '<tr class="kv-total" style="font-weight:700;"><td></td><td>Tổng cộng (' + list.length + ' người)</td><td></td><td></td><td class="num tot">' + money(Z.cs + Z.ps + Z.gc + Z.mf) + '</td><td class="num" style="font-weight:700;color:#047857;">' + money(Math.round(Z.hh)) + '</td><td></td><td class="num" style="white-space:nowrap;color:var(--red);">' + (mt ? money(mt) : '') + '</td><td></td><td></td></tr>'; })() : '') +
             '</tbody></table></div></div>';
           S.shot = {kind:'ca', rows:list.map(function(x){ return {name:x.n.ho_ten, id:x.n.ma_nv, ph:x.n.phong, cap:x.n.cap, cl:x.v.cl, sub:x.n.ma_nv + ' · ' + x.n.cap, cs:x.v.cs, ps:x.v.ps, gc:x.v.gc, mf:x.v.mf, tot:x.tot, tg:x.tg || 0, pct:x.pct, dat:x.dat}; }), scope:(S.phong.length === 1 ? short(S.phong[0]) : S.phong.length > 1 ? S.phong.length + ' phòng' : 'Tất cả phòng')};
@@ -4470,6 +4471,21 @@ showView('view-lookup-login');
           an.forEach(function(m){ LIVE.anDs[m] = 1; }); hien.forEach(function(m){ delete LIVE.anDs[m]; });
           S.anM = null; cfg.redraw(); if(typeof toast === 'function') toast('Đã lưu: ẩn ' + (r.data.an || 0) + ', hiện lại ' + (r.data.hien || 0) + ' người');
         } catch(e){ A.err = (e && e.code === 'PGRST202') ? 'Máy chủ chưa bật chức năng ẩn doanh số (cần chạy file an_doanh_so.sql).' : dbErr(e); A.busy = false; cfg.redraw(); }
+      }
+      /* tích ngay trên bảng: ẩn / hiện lại 1 người, lưu luôn */
+      async function anQuick(m, an){
+        if(!m) return; var had = !!LIVE.anDs[m]; if(an === had) return;
+        if(an) LIVE.anDs[m] = 1; else delete LIVE.anDs[m]; cfg.redraw();
+        var nm = (((S.data && S.data.nguoi) || []).filter(function(n){ return n.ma_nv === m; })[0] || {}).ho_ten || m;
+        try {
+          var a = cfg.args() || {}, r = await SBC.rpc('hr_an_ds_dat', {p_ma:a.ma || null, p_pin:a.pin || null, p_an:an ? [m] : [], p_hien:an ? [] : [m]});
+          if(r.error) throw r.error;
+          if(!r.data || !r.data.ok) throw {message:r.data && r.data.loi === 'khong_co_quyen' ? 'Bạn không có quyền ẩn doanh số người này' : 'Không lưu được, hãy đăng nhập lại'};
+          if(typeof toast === 'function') toast(an ? 'Đã ẩn doanh số ' + nm + '. Muốn hiện lại: bấm nhãn "Đã ẩn" cạnh tiêu đề bảng rồi bỏ tích.' : 'Đã hiện lại doanh số ' + nm);
+        } catch(e){
+          if(had) LIVE.anDs[m] = 1; else delete LIVE.anDs[m]; cfg.redraw();
+          if(typeof toast === 'function') toast((e && e.code === 'PGRST202') ? 'Máy chủ chưa bật chức năng ẩn doanh số' : (e && e.message) || dbErr(e));
+        }
       }
       /* ===== Xuất ảnh / PDF: chia trang, mỗi trang có tiêu đề + dòng tên cột; Tổng cộng chỉ ở trang cuối ===== */
       function openShotDlg(host){
@@ -4571,6 +4587,7 @@ showView('view-lookup-login');
           if(t.closest('.an-save')){ anSave(); return true; }
           return !!t.closest('#anOv');
         }
+        if(t.classList && t.classList.contains('kv-anck')){ anQuick(t.getAttribute('data-m'), t.checked); return true; }
         if(t.closest('.kv-an')){ anOpen(); return true; }
         if(t.closest('.kv-anshow')){ LIVE.anShow = !LIVE.anShowNow(); cfg.redraw(); return true; }
         var mb = t.closest('.ms-btn'); if(mb){ var mk = mb.getAttribute('data-k'); S.msOpen = S.msOpen === mk ? '' : mk; cfg.redraw(); return true; }
@@ -6049,7 +6066,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.130';
+  var V = 'v3.131';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
