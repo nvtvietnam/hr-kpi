@@ -3116,7 +3116,7 @@ showView('view-lookup-login');
     var br = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /Firefox|FxiOS/.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : '';
     return os + (br ? ' · ' + br : '');
   }
-  var LOAI_TXT = {tra_cuu:'Tra cứu (mã NV + PIN)', quan_ly:'Đăng nhập quản lý', doi_pin:'Đổi PIN', cap_pin:'TP cấp PIN', them_ctv:'TP thêm CTV'};
+  var LOAI_TXT = {tra_cuu:'Tra cứu (mã NV + PIN)', quan_ly:'Đăng nhập quản lý', doi_pin:'Đổi PIN', cap_pin:'TP cấp PIN', them_ctv:'TP thêm CTV', an_ds:'Ẩn doanh số'};
   var KQ_BADGE = {thanh_cong:['badge-green','Thành công'], sai_thong_tin:['badge-amber','Sai thông tin'], bi_khoa:['badge-red','Bị khóa']};
   LIVE.loadLog = async function(){
     if(!LIVE.on || LIVE.role !== 'admin'){ renderHistory(); return; }
@@ -3146,7 +3146,7 @@ showView('view-lookup-login');
       return;
     }
     var rows = logFiltered(), ok = 0, bad = 0, people = {};
-    LOG.rows.forEach(function(r){ if(r.loai === 'cap_pin' || r.loai === 'them_ctv') return; if(r.ket_qua === 'thanh_cong'){ ok++; people[r.ma_nv || r.email] = 1; } else bad++; });
+    LOG.rows.forEach(function(r){ if(r.loai === 'cap_pin' || r.loai === 'them_ctv' || r.loai === 'an_ds') return; if(r.ket_qua === 'thanh_cong'){ ok++; people[r.ma_nv || r.email] = 1; } else bad++; });
     var h = head + '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));">' +
       '<div class="stat-card"><div class="stat-label">Lượt đăng nhập thành công</div><div class="stat-value num">' + ok + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Người đã truy cập</div><div class="stat-value num">' + Object.keys(people).length + '</div></div>' +
@@ -4141,6 +4141,10 @@ showView('view-lookup-login');
       var state = t < rg.tu ? 'pre' : t > rg.den ? 'end' : 'run';
       return {tot:tot, done:done, left:tot - done, state:state};
     }
+    /* Ẩn doanh số một số nhân sự trên danh sách KPI (TP trở lên chọn) */
+    LIVE.anDs = LIVE.anDs || {}; LIVE.anShow = null;
+    LIVE.anLoad = async function(force){ if(LIVE.anLoaded && !force) return; try { var r = await SBC.rpc('hr_an_ds_goi'); if(!r.error && Array.isArray(r.data)){ LIVE.anDs = {}; r.data.forEach(function(m){ LIVE.anDs[m] = 1; }); LIVE.anLoaded = true; } } catch(e){} };
+    LIVE.anShowNow = function(){ return LIVE.anShow != null ? LIVE.anShow : !!(LIVE.on && LIVE.role === 'admin' && !LIVE.viewAs && !LIVE.member); };
     LIVE.kpiMake = function(cfg){
       var S = {ky:kyNow(), data:null, loading:false, err:'', setup:true, mode:'phong', span:'ky', from:'', to:'', phong:[], cap:[], grp:'', idg:'', lkOpen:false, lkText:'', cmp:false, msOpen:'', st:'', q:'', qFocus:false, days:[], sort:{}, det:false};
       /* giữ nguyên vị trí cuộn khi bấm xem chi tiết / tích chọn phòng (vẽ lại bảng không làm nhảy màn hình) */
@@ -4191,7 +4195,7 @@ showView('view-lookup-login');
       };
       S.init = async function(){
         if(S.kyInit) return; S.kyInit = true;
-        await LIVE.nghiLoad(); if(LIVE.nhomLoad) await LIVE.nhomLoad();
+        await LIVE.nghiLoad(); if(LIVE.nhomLoad) await LIVE.nhomLoad(); await LIVE.anLoad();
         try { var r = await SBC.rpc('hr_ky_mac_dinh_get'); if(!r.error && r.data && /^\d{4}-\d{2}$/.test(r.data)){ LIVE.kyDef = r.data; S.ky = r.data; } else LIVE.kyDef = null; } catch(e){ LIVE.kyDef = null; }
       };
       S.setDef = async function(){
@@ -4207,7 +4211,7 @@ showView('view-lookup-login');
           var x = await SBC.rpc('hr_kpi_goi', {p_tu:r.tu, p_den:r.den, p_ma:a.ma || null, p_pin:a.pin || null});
           if(x.error){ if(x.error.code === 'PGRST202' || /Could not find|does not exist/i.test(x.error.message || '')) S.setup = false; else throw x.error; }
           else if(!x.data || !x.data.ok){ throw {message:'Phiên đăng nhập hết hạn, hãy đăng nhập lại'}; }
-          else { S.setup = true; S.data = x.data; S.derive(); }
+          else { S.setup = true; S.data = x.data; S.derive(); if(!LIVE.anLoaded) await LIVE.anLoad(); }
         } catch(e){ S.err = dbErr(e); }
         S.loading = false; cfg.redraw();
       };
@@ -4237,7 +4241,10 @@ showView('view-lookup-login');
           var v = pt[p.ten] || ZERO(), tot = v.cs + v.ps + v.gc + v.mf, tg = tgPhong(p.ten, hd);
           return {p:p, v:v, tot:tot, tg:tg, pct:tg > 0 ? tot / tg : null, dat:tg > 0 && tot >= tg, tp:p.truong_phong || (hd ? hd.ho_ten : ''), cap:hd ? hd.cap : '', so:cnt[p.ten] || 0};
         });
-        return {agg:agg, persons:persons, phongs:phongs};
+        var showAn = LIVE.anShowNow(), nAn = 0;
+        var meId = String(me || (S.data && S.data.me && S.data.me.ma_nv) || (LIVE.member && LIVE.member.ma) || '').toUpperCase();
+        persons.forEach(function(x){ x.an = !!LIVE.anDs[x.n.ma_nv] && !x.me && String(x.n.ma_nv).toUpperCase() !== meId; if(x.an) nAn++; });
+        return {agg:agg, persons:showAn ? persons : persons.filter(function(x){ return !x.an; }), all:persons, nAn:nAn, showAn:showAn, phongs:phongs};
       };
       /* số liệu tổng cả kỳ (dùng cho Dashboard) */
       S.canPhong = canPhong;
@@ -4247,8 +4254,8 @@ showView('view-lookup-login');
       S.stats = function(){
         if(!S.data || !S.days.length) return null;
         var f = fullRange(), C = S.calc(f.from, f.to), tot = ZERO();
-        C.persons.forEach(function(x){ var a = C.agg[x.n.ma_nv]; if(a){ tot.cs += a.cs; tot.ps += a.ps; tot.gc += a.gc; tot.mf += a.mf; } });
-        var pp = C.persons.filter(function(x){ return x.tg > 0; }), ph = C.phongs.filter(function(x){ return x.tg > 0; }), byDay = {};
+        C.all.forEach(function(x){ var a = C.agg[x.n.ma_nv]; if(a){ tot.cs += a.cs; tot.ps += a.ps; tot.gc += a.gc; tot.mf += a.mf; } });
+        var pp = C.all.filter(function(x){ return x.tg > 0; }), ph = C.phongs.filter(function(x){ return x.tg > 0; }), byDay = {};
         var ph2 = {}; S.data.nguoi.forEach(function(n){ ph2[n.ma_nv] = 1; });
         S.data.rows.forEach(function(r){ if(!ph2[r.ma_nv]) return; var d = String(r.ngay).slice(0,10); byDay[d] = (byDay[d] || 0) + (+r.cs) + (+r.ps) + (+r.gc) + (+r.mf); });
         var best = Object.keys(byDay).sort(function(a, b){ return byDay[b] - byDay[a]; })[0];
@@ -4387,7 +4394,9 @@ showView('view-lookup-login');
         var kySel = '<select class="select" id="kvKy" style="min-width:200px;font-weight:600;">' + kyListLong(S.ky).map(function(k){ return '<option value="' + k + '"' + (k === S.ky ? ' selected' : '') + '>' + kyLabel(k) + (k === kyNow() ? ' · nay' : '') + (k === LIVE.kyDef ? ' · mặc định' : '') + '</option>'; }).join('') + '</select>';
         var defBtn = cfg.canDefault && cfg.canDefault() && S.ky !== (LIVE.kyDef || kyNow()) ? '<button class="btn btn-secondary kv-def" style="font-size:12.5px;" title="Mọi tài khoản mở KPI sẽ vào tháng này">Đặt làm mặc định</button>' : '';
         var spanSeg = '<div class="kv-seg" title="Tháng: so với chỉ tiêu tháng · Quý: cộng 3 tháng, so với tổng chỉ tiêu 3 tháng"><button class="kv-all' + (S.span === 'ky' ? ' on' : '') + '">Tháng</button><button class="kv-quy' + (S.span === 'quy' ? ' on' : '') + '">Quý</button><button class="kv-nam' + (S.span === 'nam' ? ' on' : '') + '">Năm</button></div>';
-        var tail = defBtn + (cfg.toolbarExtra ? cfg.toolbarExtra() : '');
+        var nAnSc = S.data && canPhong() ? (S.data.nguoi || []).filter(function(n){ return LIVE.anDs[n.ma_nv]; }).length : 0;
+        var anBtn = S.data && canPhong() ? '<button class="btn btn-secondary kv-an" title="Chọn người không hiện doanh số trên danh sách (khi xem, chụp ảnh, tải Excel)">🙈 Ẩn doanh số' + (nAnSc ? ' (' + nAnSc + ')' : '') + '</button>' : '';
+        var tail = defBtn + anBtn + (cfg.toolbarExtra ? cfg.toolbarExtra() : '');
         var bar = function(tools){ return '<div class="panel kvbar" style="margin-bottom:12px;"><div style="padding:10px 16px;display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center;">' + kySel + spanSeg + (tools || '') + '<span style="flex:1;"></span>' + tail + '</div></div>'; };
         if(S.loading) return h + bar() + '<div style="padding:20px;color:var(--text-muted);">Đang tải số liệu...</div></div>';
         if(!S.setup) return h + '<div class="panel"><div style="padding:18px 20px;font-size:13px;line-height:1.7;">KPI theo cấp chưa được bật. Mở Supabase → <b>SQL Editor</b> → dán nội dung file <b>kpi_phan_quyen.sql</b> → <b>Run</b>, rồi tải lại trang.</div></div></div>';
@@ -4418,19 +4427,50 @@ showView('view-lookup-login');
           var list0 = base0.filter(function(x){ return grpOk(x.n); });
           var list = sortBy(list0, 'ca', function(x, k){ return {ten:x.n.ho_ten, id:x.n.ma_nv, phong:short(x.n.phong), cap:x.n.cap, cs:x.v.cs, ps:x.v.ps, gc:x.v.gc, mf:x.v.mf, cl:x.v.cl, tot:x.tot, hh:hoaHong(x), nx:(function(o){ return o && !o.max ? o.gap : null; })(nxOf(x, LAD2, LADN, C)), tg:x.tg || null, mt:thieu(x), pct:x.pct}[k]; });
           h += lkHtml();
-          h += '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">KPI từng người (' + list.length + ') <span title="Đơn vị: đồng, hiển thị đầy đủ. Tổng KPI = Cơ sở + Phái sinh + Giải chấp + Miễn phí (Chia sẻ đã nằm trong Cơ sở, chỉ để xem). Trưởng phòng và Giám đốc chỉ hiện số của chính mình; số cả phòng xem ở chế độ Theo phòng. Bấm tên cột để sắp xếp." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div>' +
+          h += '<div class="panel"><div class="panel-head" style="padding:14px 20px 6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><div class="panel-title" style="flex:1;">KPI từng người (' + list.length + ')' + (C.nAn && canPhong() ? ' <button class="kv-anshow" title="' + (C.showAn ? 'Đang hiện cả người đã ẩn. Bấm để ẩn lại trước khi chụp.' : 'Bấm để xem tạm cả người đã ẩn') + '" style="font-size:11.5px;font-weight:600;border:1px solid ' + (C.showAn ? '#FDE3A7;background:#FFF7E6;color:#92400E' : 'var(--border);background:#fff;color:var(--text-muted)') + ';border-radius:999px;padding:2px 9px;cursor:pointer;vertical-align:middle;">' + (C.showAn ? '👁 Đang hiện ' + C.nAn + ' người đã ẩn' : '🙈 Đã ẩn ' + C.nAn + ' người') + '</button>' : '') + ' <span title="Đơn vị: đồng, hiển thị đầy đủ. Tổng KPI = Cơ sở + Phái sinh + Giải chấp + Miễn phí (Chia sẻ đã nằm trong Cơ sở, chỉ để xem). Trưởng phòng và Giám đốc chỉ hiện số của chính mình; số cả phòng xem ở chế độ Theo phòng. Bấm tên cột để sắp xếp." style="cursor:help;color:var(--text-muted);font-weight:400;font-size:13px;">ⓘ</span></div>' +
             idBtn() + (phOpts.length > 1 ? msel('phong', 'Tất cả phòng', 'phòng', phOpts.map(function(p){ return {v:p, t:short(p)}; }), S.phong) : '') +
             msel('cap', 'Mọi chức danh', 'chức danh', Object.keys(CFG.levels).map(function(l){ return {v:l, t:l}; }), S.cap) +
             '<select class="select" id="kvSt"><option value="">Đạt + chưa đạt</option><option value="dat"' + (S.st === 'dat' ? ' selected' : '') + '>Đạt</option><option value="chua"' + (S.st === 'chua' ? ' selected' : '') + '>Chưa đạt</option></select>' +
             (D.nguoi.length > 8 ? '<input class="input" id="kvQ" placeholder="Tìm tên hoặc ID" value="' + esc(S.q) + '">' : '') + '<button class="btn btn-secondary" id="kvXls">Tải Excel</button><button class="btn btn-secondary" id="kvShot" title="Chụp ảnh toàn bộ bảng để gửi">📷 Chụp ảnh</button></div><div class="panel-body">' + shareHtml(base0) + '<table class="kvt kvt-ca"><thead><tr><th>#</th>' + th('ca', 'ten', 'Tên') + th('ca', 'id', 'ID') + th('ca', 'phong', 'Phòng') + th('ca', 'tot', 'Tổng KPI') + th('ca', 'hh', 'Hoa hồng tạm tính', 'Cơ sở × 65% + Phái sinh × 40%. Bấm vào từng người để xem chi tiết Cơ sở, Phái sinh, Giải chấp, Miễn phí') + th('ca', 'tg', 'Chỉ tiêu') + th('ca', 'mt', 'Còn thiếu', 'Chỉ tiêu trừ Tổng KPI hiện tại') + th('ca', 'pct', 'Kết quả', 'Đạt / Chưa đạt kèm % hoàn thành') + th('ca', 'nx', 'KPI tiếp theo', 'Khi đã đạt chỉ tiêu: chức danh kế tiếp và số KPI còn thiếu để lên. Trưởng phòng tính theo KPI cả phòng') + '</tr></thead><tbody>' +
-            (list.length ? list.slice(0, 1500).map(function(x, ix){ var v = x.v; return '<tr class="kv-ca" data-id="' + esc(x.n.ma_nv) + '" data-bk="' + esc(bkAttr(v, x.tot)) + '" style="cursor:pointer;' + (x.me ? 'background:var(--accent-soft);' : '') + '" title="Bấm để xem chi tiết Cơ sở, Phái sinh, Giải chấp, Miễn phí"><td class="sub">' + (ix + 1) + '</td><td style="white-space:nowrap;"><b class="nm">' + esc(x.n.ho_ten) + '</b>' + (x.me ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + ' <span class="sub" style="font-size:11px;">' + esc(x.n.cap) + '</span></td><td class="sub">' + esc(x.n.ma_nv) + '</td><td class="sub" style="white-space:nowrap;">' + esc(short(x.n.phong)) + '</td><td class="num tot">' + money(x.tot) + '</td>' + hcCell(x) + '<td class="num sub"' + (x.rg ? ' title="Chỉ tiêu riêng (đã đặt khác chỉ tiêu theo cấp)" style="color:var(--accent-dark);font-weight:600;"' : '') + '>' + (x.tg ? money(x.tg) : '—') + (x.rg ? ' ✎' : '') + '</td><td class="num" style="white-space:nowrap;' + (thieu(x) > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--text-muted);') + '">' + (thieu(x) == null ? '' : thieu(x) > 0 ? money(thieu(x)) : '-') + '</td><td class="pctc">' + kqCell(x) + '</td>' + nxCell(nxOf(x, LAD2, LADN, C)) + '</tr>' + (S.openCa === String(x.n.ma_nv) ? '<tr class="kv-dt"><td colspan="10"><div class="kv-dbox"><div class="kv-dh"><b>' + esc(x.n.ho_ten) + '</b> · ' + esc(x.n.cap) + ' · chi tiết KPI</div>' + detHtml(v, x.tot, (function(){ var o = nxOf(x, LAD2, LADN, C); return mxHtml([['Hoa hồng tạm tính', money(hoaHong(x))], ['Chỉ tiêu', x.tg ? money(x.tg) : '—'], ['Còn thiếu', thieu(x) > 0 ? money(thieu(x)) : '—'], ['Kết quả', x.pct == null ? '—' : (fullNow() ? (x.dat ? 'Đạt' : 'Chưa đạt') + ' · ' : '') + viNum(x.pct * 100, 1) + '%'], ['KPI tiếp theo', !o ? '—' : o.max ? 'Mức cao nhất' : esc(o.l) + ' · thiếu ' + money(o.gap)]]); })() + '<div class="kv-dx">Hoa hồng tạm tính = Cơ sở ' + money(v.cs) + ' × 65% + Phái sinh ' + money(v.ps) + ' × 40% = <b style="color:#047857;">' + money(hoaHong(x)) + '</b>' + (v.cl ? '<br>Phí chia sẻ ' + money(v.cl) + ' đã nằm trong Cơ sở, chỉ để xem.' : '') + '</div>') + '</div></td></tr>' : ''); }).join('') : '<tr><td colspan="10" style="padding:16px;color:var(--text-muted);">Không có ai khớp bộ lọc.</td></tr>') +
+            (list.length ? list.slice(0, 1500).map(function(x, ix){ var v = x.v; return '<tr class="kv-ca" data-id="' + esc(x.n.ma_nv) + '" data-bk="' + esc(bkAttr(v, x.tot)) + '" style="cursor:pointer;' + (x.me ? 'background:var(--accent-soft);' : '') + '" title="Bấm để xem chi tiết Cơ sở, Phái sinh, Giải chấp, Miễn phí"><td class="sub">' + (ix + 1) + '</td><td style="white-space:nowrap;"><b class="nm">' + esc(x.n.ho_ten) + '</b>' + (x.an ? ' <span title="Đã ẩn doanh số, người ngoài không thấy dòng này">🙈</span>' : '') + (x.me ? ' <span style="color:var(--accent-dark);font-size:11px;">(bạn)</span>' : '') + ' <span class="sub" style="font-size:11px;">' + esc(x.n.cap) + '</span></td><td class="sub">' + esc(x.n.ma_nv) + '</td><td class="sub" style="white-space:nowrap;">' + esc(short(x.n.phong)) + '</td><td class="num tot">' + money(x.tot) + '</td>' + hcCell(x) + '<td class="num sub"' + (x.rg ? ' title="Chỉ tiêu riêng (đã đặt khác chỉ tiêu theo cấp)" style="color:var(--accent-dark);font-weight:600;"' : '') + '>' + (x.tg ? money(x.tg) : '—') + (x.rg ? ' ✎' : '') + '</td><td class="num" style="white-space:nowrap;' + (thieu(x) > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--text-muted);') + '">' + (thieu(x) == null ? '' : thieu(x) > 0 ? money(thieu(x)) : '-') + '</td><td class="pctc">' + kqCell(x) + '</td>' + nxCell(nxOf(x, LAD2, LADN, C)) + '</tr>' + (S.openCa === String(x.n.ma_nv) ? '<tr class="kv-dt"><td colspan="10"><div class="kv-dbox"><div class="kv-dh"><b>' + esc(x.n.ho_ten) + '</b> · ' + esc(x.n.cap) + ' · chi tiết KPI</div>' + detHtml(v, x.tot, (function(){ var o = nxOf(x, LAD2, LADN, C); return mxHtml([['Hoa hồng tạm tính', money(hoaHong(x))], ['Chỉ tiêu', x.tg ? money(x.tg) : '—'], ['Còn thiếu', thieu(x) > 0 ? money(thieu(x)) : '—'], ['Kết quả', x.pct == null ? '—' : (fullNow() ? (x.dat ? 'Đạt' : 'Chưa đạt') + ' · ' : '') + viNum(x.pct * 100, 1) + '%'], ['KPI tiếp theo', !o ? '—' : o.max ? 'Mức cao nhất' : esc(o.l) + ' · thiếu ' + money(o.gap)]]); })() + '<div class="kv-dx">Hoa hồng tạm tính = Cơ sở ' + money(v.cs) + ' × 65% + Phái sinh ' + money(v.ps) + ' × 40% = <b style="color:#047857;">' + money(hoaHong(x)) + '</b>' + (v.cl ? '<br>Phí chia sẻ ' + money(v.cl) + ' đã nằm trong Cơ sở, chỉ để xem.' : '') + '</div>') + '</div></td></tr>' : ''); }).join('') : '<tr><td colspan="10" style="padding:16px;color:var(--text-muted);">Không có ai khớp bộ lọc.</td></tr>') +
             (list.length ? (function(){ var Z = ZERO(), cl = 0, mt = 0; Z.hh = 0; list.forEach(function(x){ if(thieu(x) > 0) mt += thieu(x); Z.hh += hoaHong(x); Z.cs += x.v.cs; Z.ps += x.v.ps; Z.gc += x.v.gc; Z.mf += x.v.mf; cl += x.v.cl; }); return '<tr class="kv-total" style="font-weight:700;"><td></td><td>Tổng cộng (' + list.length + ' người)</td><td></td><td></td><td class="num tot">' + money(Z.cs + Z.ps + Z.gc + Z.mf) + '</td><td class="num" style="font-weight:700;color:#047857;">' + money(Math.round(Z.hh)) + '</td><td></td><td class="num" style="white-space:nowrap;color:var(--red);">' + (mt ? money(mt) : '') + '</td><td></td><td></td></tr>'; })() : '') +
             '</tbody></table></div></div>';
           S.shot = {kind:'ca', rows:list.map(function(x){ return {name:x.n.ho_ten, id:x.n.ma_nv, ph:x.n.phong, cap:x.n.cap, cl:x.v.cl, sub:x.n.ma_nv + ' · ' + x.n.cap, cs:x.v.cs, ps:x.v.ps, gc:x.v.gc, mf:x.v.mf, tot:x.tot, tg:x.tg || 0, pct:x.pct, dat:x.dat}; }), scope:(S.phong.length === 1 ? short(S.phong[0]) : S.phong.length > 1 ? S.phong.length + ' phòng' : 'Tất cả phòng')};
           S.exp = {name:'kpi_ca_nhan', aoa:[['Tên','ID','Phòng','Cấp','Cơ sở','Phái sinh','Giải chấp','Miễn phí','Phí chia sẻ','Tổng KPI','Hoa hồng tạm tính','Chỉ tiêu','% hoàn thành','Kết quả']].concat(list.map(function(x){ return [x.n.ho_ten, x.n.ma_nv, x.n.phong, x.n.cap, Math.round(x.v.cs), Math.round(x.v.ps), Math.round(x.v.gc), Math.round(x.v.mf), Math.round(x.v.cl), Math.round(x.tot), hoaHong(x), x.tg, x.pct == null ? '' : Math.round(x.pct * 1000) / 10, !fullNow() || x.pct == null ? '' : x.dat ? 'Đạt' : 'Chưa đạt']; }))};
         }
-        return h + '</div>';
+        return h + anModal() + '</div>';
       };
+      /* ===== Chọn người ẩn doanh số ===== */
+      function anVis(n, A){ var q = (A.q || '').trim().toLowerCase(); return (!A.ph || n.phong === A.ph) && (!q || (n.ho_ten + ' ' + n.ma_nv).toLowerCase().indexOf(q) > -1); }
+      function anModal(){
+        var A = S.anM; if(!A || !S.data) return '';
+        var ns = (S.data.nguoi || []).slice().sort(function(a, b){ return (LIVE.anDs[b.ma_nv] ? 1 : 0) - (LIVE.anDs[a.ma_nv] ? 1 : 0) || String(a.phong).localeCompare(String(b.phong)) || String(a.ho_ten).localeCompare(String(b.ho_ten), 'vi'); });
+        var phs = {}; ns.forEach(function(n){ phs[n.phong] = 1; }); var multi = Object.keys(phs).length > 1, nSel = Object.keys(A.sel).length;
+        return '<div id="anOv" style="position:fixed;inset:0;background:rgba(20,16,50,.45);z-index:9990;display:flex;align-items:center;justify-content:center;padding:16px;"><div style="background:#fff;border-radius:16px;width:100%;max-width:620px;max-height:92vh;overflow:auto;padding:18px 20px;box-shadow:0 20px 50px rgba(20,16,50,.25);">' +
+          '<div style="display:flex;align-items:center;margin-bottom:6px;"><div style="font-size:16px;font-weight:800;flex:1;">🙈 Ẩn doanh số</div><button class="btn btn-secondary an-x" style="height:30px;padding:0 12px;">Đóng</button></div>' +
+          '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.55;">Tích người <b>không muốn hiện doanh số</b>. Dòng của họ sẽ không hiện trong danh sách KPI cá nhân, ảnh chụp và file Excel, áp dụng cho mọi người xem (chính người đó vẫn thấy số của mình). Tổng KPI của phòng vẫn tính đủ.</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><input class="input" id="anQ" type="search" autocomplete="off" spellcheck="false" placeholder="Tìm tên hoặc ID" value="' + esc(A.q || '') + '" style="flex:1;min-width:150px;">' +
+          (multi ? '<select class="select" id="anPh"><option value="">Tất cả phòng</option>' + Object.keys(phs).sort().map(function(p){ return '<option value="' + esc(p) + '"' + (p === A.ph ? ' selected' : '') + '>' + esc(short(p)) + '</option>'; }).join('') + '</select>' : '') + '</div>' +
+          '<div id="anList" style="max-height:46vh;overflow:auto;border:1px solid var(--border);border-radius:10px;">' +
+          ns.map(function(n){ return '<label class="an-it" data-m="' + esc(n.ma_nv) + '" style="display:' + (anVis(n, A) ? 'flex' : 'none') + ';gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><input type="checkbox" class="an-ck" value="' + esc(n.ma_nv) + '"' + (A.sel[n.ma_nv] ? ' checked' : '') + ' style="width:16px;height:16px;flex:none;"><span style="flex:1;min-width:0;"><b>' + esc(n.ho_ten || '') + '</b> <span style="color:var(--text-muted);">· ' + esc(n.ma_nv) + ' · ' + esc(n.cap || '') + (multi ? ' · ' + esc(short(n.phong)) : '') + '</span></span></label>'; }).join('') + '</div>' +
+          (A.err ? '<div class="callout" style="margin-top:10px;"><div>⚠️</div><div>' + esc(A.err) + '</div></div>' : '') +
+          '<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;"><span style="flex:1;font-size:12.5px;color:var(--text-muted);">Đang chọn ẩn <b id="anN">' + nSel + '</b> người</span><button class="btn btn-secondary an-x">Hủy</button><button class="btn btn-primary an-save"' + (A.busy ? ' disabled' : '') + '>' + (A.busy ? 'Đang lưu...' : 'Lưu') + '</button></div></div></div>';
+      }
+      function anOpen(){ var sel = {}; ((S.data && S.data.nguoi) || []).forEach(function(n){ if(LIVE.anDs[n.ma_nv]) sel[n.ma_nv] = 1; }); S.anM = {sel:sel, q:'', ph:'', err:'', busy:false}; cfg.redraw(); }
+      function anFilter(){ var A = S.anM; if(!A) return; var by = {}; ((S.data && S.data.nguoi) || []).forEach(function(n){ by[n.ma_nv] = n; }); document.querySelectorAll('#anOv .an-it').forEach(function(el){ var n = by[el.getAttribute('data-m')]; el.style.display = n && anVis(n, A) ? 'flex' : 'none'; }); }
+      async function anSave(){
+        var A = S.anM; if(!A || A.busy) return;
+        var an = [], hien = []; ((S.data && S.data.nguoi) || []).forEach(function(n){ var w = !!A.sel[n.ma_nv], h0 = !!LIVE.anDs[n.ma_nv]; if(w && !h0) an.push(n.ma_nv); else if(!w && h0) hien.push(n.ma_nv); });
+        if(!an.length && !hien.length){ S.anM = null; cfg.redraw(); return; }
+        A.busy = true; A.err = ''; cfg.redraw();
+        try {
+          var a = cfg.args() || {}, r = await SBC.rpc('hr_an_ds_dat', {p_ma:a.ma || null, p_pin:a.pin || null, p_an:an, p_hien:hien});
+          if(r.error) throw r.error;
+          if(!r.data || !r.data.ok){ A.err = r.data && r.data.loi === 'khong_co_quyen' ? 'Chỉ trưởng phòng trở lên được chọn ẩn doanh số.' : 'Không lưu được, hãy đăng nhập lại.'; A.busy = false; cfg.redraw(); return; }
+          an.forEach(function(m){ LIVE.anDs[m] = 1; }); hien.forEach(function(m){ delete LIVE.anDs[m]; });
+          S.anM = null; cfg.redraw(); if(typeof toast === 'function') toast('Đã lưu: ẩn ' + (r.data.an || 0) + ', hiện lại ' + (r.data.hien || 0) + ' người');
+        } catch(e){ A.err = (e && e.code === 'PGRST202') ? 'Máy chủ chưa bật chức năng ẩn doanh số (cần chạy file an_doanh_so.sql).' : dbErr(e); A.busy = false; cfg.redraw(); }
+      }
       /* ===== Xuất ảnh / PDF: chia trang, mỗi trang có tiêu đề + dòng tên cột; Tổng cộng chỉ ở trang cuối ===== */
       function openShotDlg(host){
         var SH = S.shot; if(!SH || !SH.rows.length){ toast('Không có dữ liệu để chụp'); return; }
@@ -4515,8 +4555,9 @@ showView('view-lookup-login');
       }
       if(!window.__kvFit){ window.__kvFit = true; window.addEventListener('resize', function(){ fitKv(); }); }
       S.after = function(){ fitKv(); var qi = document.getElementById('kvQ'); if(qi && S.qFocus){ qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); } };
-      S.input = function(ev){ if(ev.target.id === 'kvLk'){ S.lkText = ev.target.value; var rs = document.getElementById('kvLkRes'); if(rs) rs.innerHTML = lkResult(); return true; } if(ev.target.id === 'kvQ'){ var qe = ev.target, v = qe.value; if(!qe._kd){ qe._kd = 1; qe.addEventListener('keydown', function(e2){ if(e2.key === 'Enter'){ e2.preventDefault(); S.q = qe.value; S.qFocus = true; cfg.redraw(); } }); } if(v.trim().length >= 4 || v === ''){ S.q = v; S.qFocus = true; cfg.redraw(); } return true; } return false; };
+      S.input = function(ev){ if(S.anM && ev.target.id === 'anQ'){ S.anM.q = ev.target.value; anFilter(); return true; } if(ev.target.id === 'kvLk'){ S.lkText = ev.target.value; var rs = document.getElementById('kvLkRes'); if(rs) rs.innerHTML = lkResult(); return true; } if(ev.target.id === 'kvQ'){ var qe = ev.target, v = qe.value; if(!qe._kd){ qe._kd = 1; qe.addEventListener('keydown', function(e2){ if(e2.key === 'Enter'){ e2.preventDefault(); S.q = qe.value; S.qFocus = true; cfg.redraw(); } }); } if(v.trim().length >= 4 || v === ''){ S.q = v; S.qFocus = true; cfg.redraw(); } return true; } return false; };
       S.change = function(ev){ var t = ev.target; S.qFocus = false;
+        if(S.anM){ if(t.classList && t.classList.contains('an-ck')){ if(t.checked) S.anM.sel[t.value] = 1; else delete S.anM.sel[t.value]; var nn = document.getElementById('anN'); if(nn) nn.textContent = Object.keys(S.anM.sel).length; return true; } if(t.id === 'anPh'){ S.anM.ph = t.value; anFilter(); return true; } return true; }
         if(t.classList && t.classList.contains('ms-ck')){ var ar = S[t.getAttribute('data-k')], ix = ar.indexOf(t.value); if(t.checked && ix < 0) ar.push(t.value); else if(!t.checked && ix > -1) ar.splice(ix, 1); cfg.redraw(); return true; }
         if(t.id === 'kvKy'){ if(cfg.onKy) cfg.onKy(t.value); else S.load(t.value); return true; }
         if(t.id === 'kvFrom'){ if(t.value){ S.from = t.value; if(S.to < S.from) S.to = S.from; } }
@@ -4525,6 +4566,13 @@ showView('view-lookup-login');
         cfg.redraw(); return true; };
       S.click = function(ev){
         var t = ev.target; S.qFocus = false;
+        if(S.anM){
+          if(t.closest('.an-x') || t.id === 'anOv'){ S.anM = null; cfg.redraw(); return true; }
+          if(t.closest('.an-save')){ anSave(); return true; }
+          return !!t.closest('#anOv');
+        }
+        if(t.closest('.kv-an')){ anOpen(); return true; }
+        if(t.closest('.kv-anshow')){ LIVE.anShow = !LIVE.anShowNow(); cfg.redraw(); return true; }
         var mb = t.closest('.ms-btn'); if(mb){ var mk = mb.getAttribute('data-k'); S.msOpen = S.msOpen === mk ? '' : mk; cfg.redraw(); return true; }
         var ma = t.closest('.ms-all'); if(ma){ ev.preventDefault(); var kk = ma.getAttribute('data-k'); S[kk] = kk === 'phong' ? ((S.data && S.data.phong) || []).map(function(p){ return p.ten; }) : Object.keys(CFG.levels); cfg.redraw(); return true; }
         var sp0 = t.closest('.ms-sp'), np0 = t.closest('.ms-snp'); if(sp0 || np0){ ev.preventDefault(); var all0 = ((S.data && S.data.phong) || []).map(function(p){ return p.ten; }), gk = (sp0 || np0).getAttribute('data-g'), gg = GR().filter(function(x){ return x.k === gk; })[0], sp1 = gg ? (gg.phong || []) : []; S.phong = all0.filter(function(p){ return sp0 ? sp1.indexOf(p) > -1 : sp1.indexOf(p) < 0; }); cfg.redraw(); return true; }
@@ -6001,7 +6049,7 @@ showView('view-lookup-login');
 
 /* ===== Số phiên bản hiển thị ===== */
 (function(){
-  var V = 'v3.129';
+  var V = 'v3.130';
   function mk(cls){ var d = document.createElement('div'); d.className = 'app-ver ' + (cls || ''); d.textContent = V; d.title = 'Phiên bản đang chạy. Nếu khác phiên bản mình vừa gửi, hãy tải lại trang (Ctrl+F5).'; return d; }
   document.querySelectorAll('.sidebar').forEach(function(sb){ sb.appendChild(mk('in-side')); });
   var card = document.querySelector('#view-lookup-login .login-card'); if(card) card.appendChild(mk('in-login'));
